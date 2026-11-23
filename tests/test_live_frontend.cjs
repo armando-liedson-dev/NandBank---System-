@@ -1,0 +1,11 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert'),{webcrypto}=require('crypto');
+const code=fs.readFileSync(require('path').join(__dirname,'../frontend/static/app.js'),'utf8');
+const app={innerHTML:'',classList:{toggle:()=>{}},value:'',hidden:false};
+const ctx={document:{getElementById:id=>app},sessionStorage:{getItem:()=>null,setItem:()=>{},removeItem:()=>{}},navigator:{},crypto:webcrypto,fetch:()=>new Promise(()=>{}),setInterval:()=>0,setTimeout:()=>0,console,window:{scrollTo:()=>{}},Intl,URL,Date,Number,Math};
+vm.createContext(ctx);vm.runInContext(code,ctx);
+assert(app.innerHTML.includes('O seu dinheiro.'),'landing pública real');
+vm.runInContext('showAuth(false)',ctx);
+assert(app.innerHTML.includes('loginEmail')&&app.innerHTML.includes('loginPassword'),'login real');
+vm.runInContext('showAuth(true)',ctx);
+assert(app.innerHTML.includes('regName')&&app.innerHTML.includes('regBranch'),'registo real');
+console.log('PASSOU: landing, login, registo — frontend Docker renderizado sem API.');

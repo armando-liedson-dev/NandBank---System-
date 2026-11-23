@@ -1,0 +1,13 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const src=fs.readFileSync(require('path').join(__dirname,'../pages/demo.js'),'utf8');
+const el={innerHTML:''};const context={window:{scrollTo:()=>{}},document:{getElementById:id=>el},setTimeout:()=>0,console,Intl,Number,Date};
+vm.createContext(context);vm.runInContext(src,context);
+assert(el.innerHTML.includes('O seu dinheiro.'),'landing');
+vm.runInContext('showAuth(false)',context);assert(el.innerHTML.includes('DEMONSTRAÇÃO'),'auth');
+vm.runInContext("demo.profile='clientaf';demo.mode='app';render()",context);assert(el.innerHTML.includes('Visão geral'),'cliente');
+vm.runInContext("demo.page='cards';render()",context);assert(el.innerHTML.includes('cartões virtuais')||el.innerHTML.includes('Cartões virtuais'),'cartões');
+vm.runInContext("demo.page='transfer';render()",context);assert(el.innerHTML.includes('Simular transferência'),'transferência');
+vm.runInContext("demo.profile='manageraf';demo.page='nodes';render()",context);assert(el.innerHTML.includes('Controlo de failover'),'gestão');
+vm.runInContext("demoDrop('af')",context);assert(el.innerHTML.includes('Principal indisponível')||el.innerHTML.includes('principal desligado')||el.innerHTML.includes('Principal indisponível'.toLowerCase()),'failover');
+vm.runInContext("demoRecover('af')",context);assert(el.innerHTML.includes('Operações disponíveis'),'recuperação');
+console.log('PASSOU: landing, acesso demo, cliente, cartões, transferências, gerente, failover, recuperação.');
