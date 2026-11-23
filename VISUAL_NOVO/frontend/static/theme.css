@@ -1,0 +1,130 @@
+/* NandBank — Design system sóbrio: SGNP + referências fintech fornecidas. */
+:root{font-family:Inter,'Segoe UI',system-ui,sans-serif;--plum:#202525;--plum2:#323a39;--violet:#a07b40;--lavender:#f2eee7;--line:#e5e7e6;--dim:#747d7b;--bg:#f5f7f6;--white:#fff;color:#26302f;background:var(--bg)}
+body{background:var(--bg);color:#26302f;line-height:1.45}
+.environment-label{background:#202625;color:#cfd6d2;font-weight:600;letter-spacing:.14em;padding:6px 12px}
+.wordmark{font-weight:800;letter-spacing:-.05em}
+.wordmark small{color:#aab4b1;letter-spacing:.11em}
+.brand-icon{background:transparent;box-shadow:none;border-radius:0;width:36px;height:40px}
+.brand-lion{height:39px;width:35px;object-fit:contain}
+.big .brand-lion{height:54px;width:48px}
+.sidebar{background:#1d2322;color:#eaf0ed;border-right:1px solid #2e3633}
+.sidebar .wordmark{letter-spacing:-.04em}
+.role-chip{border-color:#ffffff16}
+.avatar,.top-avatar{background:#526660;border-radius:100%}
+.nav-caption{color:#879992}
+.nav-menu button,.nav-bottom button{color:#c8d5cd;font-size:12px}
+.nav-menu button.active{background:#36433e;box-shadow:inset 3px 0 #b9975c;color:#fff}
+.nav-menu button:hover,.nav-bottom button:hover{background:#303b36}
+.nav-bottom{color:#b7c8c0}
+.main-shell{background:#f6f8f7}
+.topbar{background:#fff;border-bottom:1px solid var(--line)}
+.top-hint{color:#9a804f}
+.header-title,.page-heading h1,.section-title h3,.account-card h3,.metric b,.transaction-item strong,.service-group>h3{color:#24302c}
+.content{max-width:1460px;padding-top:28px}
+.panel,.account-card,.metric,.quick-actions button{box-shadow:0 4px 18px rgba(19,33,28,.035);border:1px solid #e5e9e6;border-radius:14px}
+.metric{padding:20px}
+.metric-icon,.account-top,.inline-link,.icon-btn{color:#97723e}
+.btn{border-radius:10px}
+.btn-main{background:#2d443d;box-shadow:none;color:#fff}
+.btn-main:hover{background:#22372f;filter:none}
+.btn-ghost{background:#f6f7f6;border:1px solid #dbe3de;color:#354c42}
+.btn-ghost:hover{background:#edf1ee}
+.client-hero{background:#283e36;min-height:194px;border-radius:16px}
+.client-hero p,.balance-label{color:#d2dfd9}
+.eyebrow,.eyebrow.light{color:#af894e}
+.hero-watermark{opacity:.075}
+.quick-actions button{color:#31433b}
+.quick-actions button>div{color:#9b7746;background:#f5f1e8}
+.quick-actions button:hover{transform:translateY(-1px);border-color:#b6c4b8}
+.account-card .account-number button{color:#8b6b40}
+.service-card{border-radius:12px;box-shadow:none;color:#26312f}
+.service-icon{background:#f3f4ef;color:#a27f49}
+button.service-card:hover{border-color:#b8c7bd;background:#fbfcfb}
+.service-meta,.step-label,.rate-chip,.rate-origin{color:#90713f}
+.receive{background:#f8f6f0;border-color:#e8e4d8}
+.receive h2{color:#2c463a}
+.about-grid>div,.node-card,.account-modal-field{background:#f7f9f7}
+.node-card .node-head,.node-info b{color:#355245}
+.status-pill{background:#edf1ed;color:#637469}
+.status-pill.committed{background:#e9f6ec;color:#267444}
+.status-pill.aborted{background:#fff0f0;color:#ba4242}
+.status-pill.pending{background:#fff8e9;color:#86621e}
+.bottom-nav button.active{color:#997542}
+.modal-backdrop{background:#111e1b9b}
+.account-modal{border-color:#dce4db}
+.account-modal-field{border-color:#e1e7df}
+.auth-brand{background:#25352e;min-height:660px}
+.auth-copy h1 em{color:#dfc28b}
+.auth-copy p{color:#e1e7e4}
+.auth-feature{color:#e6eee9}
+.auth-feature svg{color:#d9b877}
+.auth-side{background:#f7f8f6}
+.auth-card{border-color:#e6e9e4;box-shadow:0 20px 55px #233a2810}
+.auth-tabs{background:#f0f2ef}
+.auth-tabs button.selected{color:#345142}
+.form label{color:#4d6057}
+.form input,.form select,input,select{border:1px solid #d5dfd8;background:#fff;color:#2a3d33}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #b8a077;outline-offset:2px}
+/* Landing: editorial, espaço em branco e fotografia real sem filtros artificiais */
+.public-site{min-height:100vh;background:#fff;color:#22312b}
+.landing-nav{height:76px;display:flex;align-items:center;justify-content:space-between;gap:28px;max-width:1400px;padding:0 30px;margin:auto}
+.landing-logo{display:flex;gap:10px;align-items:center;font-size:24px;letter-spacing:-.05em;color:#22332a;white-space:nowrap}
+.landing-logo img{height:45px;width:36px;background:#26342e;border-radius:10px;padding:3px;object-fit:contain}
+.landing-nav nav{display:flex;gap:32px;font-size:13px;font-weight:600;color:#52635a}
+.landing-nav nav a:hover{color:#a87c39}
+.landing-actions,.hero-buttons{display:flex;align-items:center;gap:12px}
+.landing-nav button,.hero-buttons button,.landing-callout button{border:0;border-radius:10px;font-size:13px;font-weight:750;padding:13px 20px;min-height:43px}
+.landing-nav .outline,.hero-buttons .outline{border:1px solid #cbd5cb;color:#33483b;background:#fff}
+.landing-nav .gold,.hero-buttons .gold,.landing-callout .gold{background:#b88b48;color:#fff}
+.landing-nav button:hover,.hero-buttons button:hover,.landing-callout button:hover{filter:brightness(.95);transform:translateY(-1px)}
+.landing-hero{display:grid;grid-template-columns:minmax(380px,.95fr) minmax(0,1.05fr);min-height:530px;max-width:1460px;margin:0 auto;background:#f5f6f2;overflow:hidden}
+.hero-copy{padding:clamp(45px,7vw,110px) clamp(28px,6vw,94px);display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+.hero-copy .eyebrow{font-size:12px;letter-spacing:.14em;color:#aa8041}
+.hero-copy h1{font-size:clamp(43px,5.1vw,79px);font-weight:800;letter-spacing:-.063em;line-height:1.04;color:#1b2c26;margin:19px 0 20px}
+.hero-copy>p{max-width:520px;font-size:17px;line-height:1.7;color:#5f6b63;margin:0 0 28px}
+.hero-buttons .gold{min-width:195px}.hero-caption{font-size:11px;color:#8a948d;margin-top:28px}
+.hero-image{min-height:430px;position:relative;background-image:none;background-size:cover;background-position:center}
+.hero-float{position:absolute;left:22px;bottom:27px;display:flex;gap:12px;align-items:center;max-width:260px;padding:13px 18px;background:rgba(255,255,255,.94);border-radius:12px;box-shadow:0 10px 25px #182a2623}
+.hero-float img{width:35px;height:35px;background:#25352e;border-radius:9px;padding:3px;object-fit:contain}
+.hero-float b,.hero-float small{display:block}.hero-float b{font-size:13px}.hero-float small{font-size:11px;color:#6a796e;margin-top:2px}
+.landing-features{max-width:1360px;padding:42px 30px;display:grid;grid-template-columns:repeat(3,1fr);gap:35px;margin:auto}
+.landing-features>div{padding:10px 12px 8px 0;border-right:1px solid #e7ece7}.landing-features>div:last-child{border-right:0}
+.landing-features strong{font-size:15px;display:block;margin-top:7px}.feature-no{font-size:12px;color:#ad8444;font-weight:750}.landing-features p{max-width:330px;font-size:13px;line-height:1.7;color:#69786e;margin:8px 0}
+.landing-services{background:#f7f8f6;padding:88px max(30px,calc((100vw - 1280px)/2));display:grid;grid-template-columns:.9fr 1.1fr;gap:55px;align-items:center}
+.landing-services h2,.landing-process h2,.landing-callout h2{font-size:clamp(32px,3.5vw,52px);letter-spacing:-.053em;line-height:1.14;margin:17px 0}.landing-services p,.landing-callout p{color:#65756a;line-height:1.7;max-width:500px}
+.landing-service-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.landing-service-grid div{display:grid;align-content:start;gap:9px;min-height:136px;padding:22px;background:white;border:1px solid #e6ebe6;border-radius:13px;color:#a17d46;font-size:22px}.landing-service-grid b{color:#273b30;font-size:14px}.landing-service-grid small{font-size:12px;color:#728073}
+.landing-process{max-width:1350px;margin:auto;padding:95px 30px}.landing-process>div{display:grid;grid-template-columns:repeat(3,1fr);gap:35px;margin-top:42px}.landing-process article{border-top:1px solid #d5dfd7;padding-top:23px}.landing-process article>span{color:#ba9354;font-size:13px;font-weight:800}.landing-process article h3{margin:14px 0 8px;font-size:22px}.landing-process article p{font-size:14px;color:#647269}
+.landing-callout{background:#e9eeea;padding:65px max(30px,calc((100vw - 1280px)/2));display:flex;justify-content:space-between;align-items:center;gap:30px}.landing-callout h2{max-width:680px}.landing-callout p{margin-bottom:0}
+.landing-footer{padding:24px max(30px,calc((100vw - 1280px)/2));background:#202825;color:#dde6de;display:flex;align-items:center;justify-content:space-between;gap:20px}.landing-footer .landing-logo{font-size:19px;color:#fff}.landing-footer span{font-size:11px;color:#a4b6a8}
+.back-home{position:fixed;top:34px;right:15px;z-index:200}.back-home button{background:#fdfdfd;border:1px solid #d8e0da;border-radius:9px;padding:10px 14px;color:#2c3f31}
+/* Cartões digitais e operações de nós */
+.card-page{display:grid;gap:20px}.card-page>.panel,.management-panel{padding:25px}
+.card-display{display:grid;grid-template-columns:minmax(270px,350px) 1fr;align-items:center;gap:25px;padding:22px 0;border-bottom:1px solid #e9eee9}
+.bank-card{aspect-ratio:1.7;background:#223029;border:1px solid #a68c5c;border-radius:17px;color:#fff;padding:22px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 10px 22px #26332a18;transition:transform .45s ease,filter .25s ease;transform-style:preserve-3d}
+.bank-card:hover{transform:perspective(900px) rotateY(-7deg) rotateX(2deg)}
+.bank-card.frozen{filter:grayscale(.95)}
+.bank-card .card-top{display:flex;align-items:center;gap:9px}.bank-card .card-top img{width:31px;height:33px;object-fit:contain}.bank-card .card-top span{font-size:17px;font-weight:850}.bank-card .card-top small{margin-left:auto;font-size:8px;letter-spacing:.13em;color:#e3c997}
+.card-chip{font-size:28px;color:#d8bc81}.card-number{font-size:18px;letter-spacing:.12em}.card-bottom{display:flex;justify-content:space-between;gap:12px;font-size:11px;letter-spacing:.07em}.card-bottom b{color:#e2c992;font-size:9px}
+.card-info p{font-size:13px;color:#6e7d71;line-height:1.6}.card-info button{margin-top:10px}
+.card-review{border-bottom:1px solid #e5ebe5;padding:16px 0;display:flex;justify-content:space-between;align-items:center;gap:15px}.card-review p{font-size:12px;color:#607267;margin:4px 0}.card-review small{font-size:11px;color:#829288}.review-buttons{display:flex;gap:9px}
+.management-panel{margin-top:20px}.management-panel>p{max-width:900px}.management-panel h3{margin-top:20px}
+.management-form{display:grid;grid-template-columns:repeat(2,1fr);gap:15px;align-items:end;padding:15px 0 25px}.management-form label{display:grid;gap:6px;font-size:12px;font-weight:700;color:#536459}.management-form button{width:max-content}
+@media(max-width:960px){.landing-nav nav{gap:15px}.landing-hero{grid-template-columns:1fr 1fr}.hero-copy{padding:45px 35px}.landing-services{padding:65px 35px;gap:25px}.landing-callout{padding:50px 35px}}
+@media(max-width:720px){.landing-nav{height:64px;padding:0 16px}.landing-logo{font-size:20px}.landing-logo img{height:38px;width:31px}.landing-nav nav{display:none}.landing-actions{gap:7px}.landing-nav button{padding:9px 11px;font-size:11px;min-height:35px}.landing-hero{display:flex;flex-direction:column}.hero-copy{padding:42px 22px}.hero-copy h1{font-size:44px}.hero-copy>p{font-size:15px}.hero-image{height:270px;min-height:270px}.hero-float{bottom:15px;left:15px}.landing-features{grid-template-columns:1fr;gap:12px;padding:26px 23px}.landing-features>div{border-right:0;border-bottom:1px solid #e7ece7;padding-bottom:16px}.landing-services{grid-template-columns:1fr;padding:50px 22px}.landing-service-grid{gap:8px}.landing-service-grid div{padding:15px;min-height:115px}.landing-process{padding:55px 22px}.landing-process>div{grid-template-columns:1fr;gap:10px}.landing-callout{flex-direction:column;align-items:flex-start;padding:45px 22px}.landing-footer{padding:22px;flex-direction:column;align-items:flex-start}.card-display{grid-template-columns:1fr}.management-form{grid-template-columns:1fr}.card-review{align-items:flex-start;flex-direction:column}.card-page>.panel,.management-panel{padding:17px}.back-home{top:20px;right:10px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+/* Cartão académico interactivo: rotação 3D reversível, sem CVV financeiro real. */
+.card-scene{perspective:1000px;max-width:350px}
+.card-rotator{display:block;position:relative;width:100%;aspect-ratio:1.7;padding:0;background:transparent;border:0;border-radius:16px;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.2,.7,.2,1);text-align:left}
+.card-rotator.flipped{transform:rotateY(180deg)}
+.card-rotator.frozen{filter:grayscale(1)}
+.card-face{position:absolute;inset:0;border-radius:16px;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:1px solid #a68c5c;color:#fff;background:#223029;display:flex;flex-direction:column;justify-content:space-between;padding:22px;box-shadow:0 10px 22px #26332a18}
+.card-face .card-top{display:flex;align-items:center;gap:9px}
+.card-face .card-top img{width:31px;height:33px;object-fit:contain}
+.card-face .card-top>span{font-weight:850;font-size:17px}
+.card-face .card-top small{margin-left:auto;font-size:8px;color:#e3c997}
+.card-back{transform:rotateY(180deg);background:#293b32}
+.card-back-band{height:40px;background:#121c18;margin:0 -22px}
+.card-back-label{background:#f5f4ed;color:#2d4539;font-weight:800;padding:11px 14px;text-align:right;border-radius:4px}
+.card-back-caption{font-size:11px;line-height:1.5;color:#d5e4d9}.card-back>b{font-size:16px}
+.flip-instruction{display:block;text-align:center;color:#637369;font-size:11px;margin:11px 0 0}
+@media(prefers-reduced-motion:reduce){.card-rotator{transition:none!important}}
