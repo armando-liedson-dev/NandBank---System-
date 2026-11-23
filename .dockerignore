@@ -1,0 +1,12 @@
+.git
+**/__pycache__
+**/.pytest_cache
+frontend/node_modules
+frontend/dist
+.env
+.credentials
+certs
+*.zip
+*.log
+
+.private-backups/

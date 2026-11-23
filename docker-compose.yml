@@ -1,0 +1,705 @@
+name: globalscale
+services:
+  cert-init:
+    image: globalscale-bank:1.0
+    command:
+    - python
+    - /app/certgen.py
+    environment:
+      LAN_IP: ${LAN_IP:-127.0.0.1}
+      CERT_PASSWORD: ${CERT_PASSWORD:?Falta CERT_PASSWORD}
+    volumes:
+    - certs:/certs
+    restart: 'no'
+    networks:
+    - mesh
+  db-global:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - pg_global:/var/lib/postgresql/data
+    - ./infra/sql/global.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+    - ./infra/sql/pg-secure.sh:/docker-entrypoint-initdb.d/20-secure.sh:ro
+    - certs:/certs:ro
+    command:
+    - postgres
+    - -c
+    - ssl=on
+    - -c
+    - ssl_cert_file=/certs/db-global.crt
+    - -c
+    - ssl_key_file=/certs/db-global.key
+    - -c
+    - max_prepared_transactions=100
+    - -c
+    - max_connections=85
+    - -c
+    - shared_buffers=32MB
+    - -c
+    - password_encryption=scram-sha-256
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U globalscale -d globalscale
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 15s
+    depends_on:
+      cert-init:
+        condition: service_completed_successfully
+    networks:
+    - mesh
+  db-af:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - pg_af:/var/lib/postgresql/data
+    - ./infra/sql/regional.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+    - ./infra/sql/pg-secure.sh:/docker-entrypoint-initdb.d/20-secure.sh:ro
+    - certs:/certs:ro
+    command:
+    - postgres
+    - -c
+    - ssl=on
+    - -c
+    - ssl_cert_file=/certs/db-af.crt
+    - -c
+    - ssl_key_file=/certs/db-af.key
+    - -c
+    - max_prepared_transactions=100
+    - -c
+    - max_connections=85
+    - -c
+    - shared_buffers=32MB
+    - -c
+    - password_encryption=scram-sha-256
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U globalscale -d globalscale
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 15s
+    depends_on:
+      cert-init:
+        condition: service_completed_successfully
+    networks:
+    - mesh
+  db-eu:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - pg_eu:/var/lib/postgresql/data
+    - ./infra/sql/regional.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+    - ./infra/sql/pg-secure.sh:/docker-entrypoint-initdb.d/20-secure.sh:ro
+    - certs:/certs:ro
+    command:
+    - postgres
+    - -c
+    - ssl=on
+    - -c
+    - ssl_cert_file=/certs/db-eu.crt
+    - -c
+    - ssl_key_file=/certs/db-eu.key
+    - -c
+    - max_prepared_transactions=100
+    - -c
+    - max_connections=85
+    - -c
+    - shared_buffers=32MB
+    - -c
+    - password_encryption=scram-sha-256
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U globalscale -d globalscale
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 15s
+    depends_on:
+      cert-init:
+        condition: service_completed_successfully
+    networks:
+    - mesh
+  db-as:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - pg_as:/var/lib/postgresql/data
+    - ./infra/sql/regional.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+    - ./infra/sql/pg-secure.sh:/docker-entrypoint-initdb.d/20-secure.sh:ro
+    - certs:/certs:ro
+    command:
+    - postgres
+    - -c
+    - ssl=on
+    - -c
+    - ssl_cert_file=/certs/db-as.crt
+    - -c
+    - ssl_key_file=/certs/db-as.key
+    - -c
+    - max_prepared_transactions=100
+    - -c
+    - max_connections=85
+    - -c
+    - shared_buffers=32MB
+    - -c
+    - password_encryption=scram-sha-256
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U globalscale -d globalscale
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 15s
+    depends_on:
+      cert-init:
+        condition: service_completed_successfully
+    networks:
+    - mesh
+  db-na:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - pg_na:/var/lib/postgresql/data
+    - ./infra/sql/regional.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+    - ./infra/sql/pg-secure.sh:/docker-entrypoint-initdb.d/20-secure.sh:ro
+    - certs:/certs:ro
+    command:
+    - postgres
+    - -c
+    - ssl=on
+    - -c
+    - ssl_cert_file=/certs/db-na.crt
+    - -c
+    - ssl_key_file=/certs/db-na.key
+    - -c
+    - max_prepared_transactions=100
+    - -c
+    - max_connections=85
+    - -c
+    - shared_buffers=32MB
+    - -c
+    - password_encryption=scram-sha-256
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U globalscale -d globalscale
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 15s
+    depends_on:
+      cert-init:
+        condition: service_completed_successfully
+    networks:
+    - mesh
+  db-sa:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - pg_sa:/var/lib/postgresql/data
+    - ./infra/sql/regional.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+    - ./infra/sql/pg-secure.sh:/docker-entrypoint-initdb.d/20-secure.sh:ro
+    - certs:/certs:ro
+    command:
+    - postgres
+    - -c
+    - ssl=on
+    - -c
+    - ssl_cert_file=/certs/db-sa.crt
+    - -c
+    - ssl_key_file=/certs/db-sa.key
+    - -c
+    - max_prepared_transactions=100
+    - -c
+    - max_connections=85
+    - -c
+    - shared_buffers=32MB
+    - -c
+    - password_encryption=scram-sha-256
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U globalscale -d globalscale
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 15s
+    depends_on:
+      cert-init:
+        condition: service_completed_successfully
+    networks:
+    - mesh
+  db-oc:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - pg_oc:/var/lib/postgresql/data
+    - ./infra/sql/regional.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+    - ./infra/sql/pg-secure.sh:/docker-entrypoint-initdb.d/20-secure.sh:ro
+    - certs:/certs:ro
+    command:
+    - postgres
+    - -c
+    - ssl=on
+    - -c
+    - ssl_cert_file=/certs/db-oc.crt
+    - -c
+    - ssl_key_file=/certs/db-oc.key
+    - -c
+    - max_prepared_transactions=100
+    - -c
+    - max_connections=85
+    - -c
+    - shared_buffers=32MB
+    - -c
+    - password_encryption=scram-sha-256
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U globalscale -d globalscale
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 15s
+    depends_on:
+      cert-init:
+        condition: service_completed_successfully
+    networks:
+    - mesh
+  af-primary:
+    image: globalscale-bank:1.0
+    restart: unless-stopped
+    command:
+    - python
+    - -m
+    - app.region
+    environment:
+      REGION: af
+      INSTANCE: primary
+      DB_HOST: db-af
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - certs:/certs:ro
+    depends_on:
+      db-af:
+        condition: service_healthy
+    networks:
+    - mesh
+  af-standby:
+    image: globalscale-bank:1.0
+    restart: unless-stopped
+    command:
+    - python
+    - -m
+    - app.region
+    environment:
+      REGION: af
+      INSTANCE: standby
+      DB_HOST: db-af
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - certs:/certs:ro
+    depends_on:
+      db-af:
+        condition: service_healthy
+    networks:
+    - mesh
+  eu-primary:
+    image: globalscale-bank:1.0
+    restart: unless-stopped
+    command:
+    - python
+    - -m
+    - app.region
+    environment:
+      REGION: eu
+      INSTANCE: primary
+      DB_HOST: db-eu
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - certs:/certs:ro
+    depends_on:
+      db-eu:
+        condition: service_healthy
+    networks:
+    - mesh
+  eu-standby:
+    image: globalscale-bank:1.0
+    restart: unless-stopped
+    command:
+    - python
+    - -m
+    - app.region
+    environment:
+      REGION: eu
+      INSTANCE: standby
+      DB_HOST: db-eu
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - certs:/certs:ro
+    depends_on:
+      db-eu:
+        condition: service_healthy
+    networks:
+    - mesh
+  as-primary:
+    image: globalscale-bank:1.0
+    restart: unless-stopped
+    command:
+    - python
+    - -m
+    - app.region
+    environment:
+      REGION: as
+      INSTANCE: primary
+      DB_HOST: db-as
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - certs:/certs:ro
+    depends_on:
+      db-as:
+        condition: service_healthy
+    networks:
+    - mesh
+  as-standby:
+    image: globalscale-bank:1.0
+    restart: unless-stopped
+    command:
+    - python
+    - -m
+    - app.region
+    environment:
+      REGION: as
+      INSTANCE: standby
+      DB_HOST: db-as
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - certs:/certs:ro
+    depends_on:
+      db-as:
+        condition: service_healthy
+    networks:
+    - mesh
+  na-primary:
+    image: globalscale-bank:1.0
+    restart: unless-stopped
+    command:
+    - python
+    - -m
+    - app.region
+    environment:
+      REGION: na
+      INSTANCE: primary
+      DB_HOST: db-na
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - certs:/certs:ro
+    depends_on:
+      db-na:
+        condition: service_healthy
+    networks:
+    - mesh
+  na-standby:
+    image: globalscale-bank:1.0
+    restart: unless-stopped
+    command:
+    - python
+    - -m
+    - app.region
+    environment:
+      REGION: na
+      INSTANCE: standby
+      DB_HOST: db-na
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - certs:/certs:ro
+    depends_on:
+      db-na:
+        condition: service_healthy
+    networks:
+    - mesh
+  sa-primary:
+    image: globalscale-bank:1.0
+    restart: unless-stopped
+    command:
+    - python
+    - -m
+    - app.region
+    environment:
+      REGION: sa
+      INSTANCE: primary
+      DB_HOST: db-sa
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - certs:/certs:ro
+    depends_on:
+      db-sa:
+        condition: service_healthy
+    networks:
+    - mesh
+  sa-standby:
+    image: globalscale-bank:1.0
+    restart: unless-stopped
+    command:
+    - python
+    - -m
+    - app.region
+    environment:
+      REGION: sa
+      INSTANCE: standby
+      DB_HOST: db-sa
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - certs:/certs:ro
+    depends_on:
+      db-sa:
+        condition: service_healthy
+    networks:
+    - mesh
+  oc-primary:
+    image: globalscale-bank:1.0
+    restart: unless-stopped
+    command:
+    - python
+    - -m
+    - app.region
+    environment:
+      REGION: oc
+      INSTANCE: primary
+      DB_HOST: db-oc
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - certs:/certs:ro
+    depends_on:
+      db-oc:
+        condition: service_healthy
+    networks:
+    - mesh
+  oc-standby:
+    image: globalscale-bank:1.0
+    restart: unless-stopped
+    command:
+    - python
+    - -m
+    - app.region
+    environment:
+      REGION: oc
+      INSTANCE: standby
+      DB_HOST: db-oc
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+    volumes:
+    - certs:/certs:ro
+    depends_on:
+      db-oc:
+        condition: service_healthy
+    networks:
+    - mesh
+  router:
+    image: haproxy:3.2-alpine
+    restart: unless-stopped
+    volumes:
+    - ./infra/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      af-primary:
+        condition: service_started
+      af-standby:
+        condition: service_started
+      eu-primary:
+        condition: service_started
+      eu-standby:
+        condition: service_started
+      as-primary:
+        condition: service_started
+      as-standby:
+        condition: service_started
+      na-primary:
+        condition: service_started
+      na-standby:
+        condition: service_started
+      sa-primary:
+        condition: service_started
+      sa-standby:
+        condition: service_started
+      oc-primary:
+        condition: service_started
+      oc-standby:
+        condition: service_started
+    networks:
+      mesh:
+        aliases:
+        - region-af
+        - region-eu
+        - region-as
+        - region-na
+        - region-sa
+        - region-oc
+  legacy:
+    build:
+      context: ./infra/legacy
+      dockerfile: Dockerfile
+    image: globalscale-legacy:1.0
+    environment:
+      INTEGRITY_KEY: ${INTEGRITY_KEY:?Falta INTEGRITY_KEY}
+      CERT_PASSWORD: ${CERT_PASSWORD:?Falta CERT_PASSWORD}
+    volumes:
+    - certs:/certs:ro
+    depends_on:
+      cert-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+    - mesh
+  gateway:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: globalscale-bank:1.0
+    restart: unless-stopped
+    ports:
+    - ${BIND_IP:-0.0.0.0}:8443:8443
+    environment:
+      PG_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Execute INICIAR_WINDOWS.ps1}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+      DB_HOST: db-global
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Falta ADMIN_PASSWORD}
+      REGIONAL_PASSWORD: ${REGIONAL_PASSWORD:?Falta REGIONAL_PASSWORD}
+      TELLER_PASSWORD: ${TELLER_PASSWORD:?Falta TELLER_PASSWORD}
+      BRANCH_PASSWORD: ${BRANCH_PASSWORD:?Falta BRANCH_PASSWORD}
+      MANAGER_AF_PASSWORD: ${MANAGER_AF_PASSWORD:?Falta MANAGER_AF_PASSWORD}
+      MANAGER_AS_PASSWORD: ${MANAGER_AS_PASSWORD:?Falta MANAGER_AS_PASSWORD}
+      MANAGER_NA_PASSWORD: ${MANAGER_NA_PASSWORD:?Falta MANAGER_NA_PASSWORD}
+      MANAGER_SA_PASSWORD: ${MANAGER_SA_PASSWORD:?Falta MANAGER_SA_PASSWORD}
+      MANAGER_OC_PASSWORD: ${MANAGER_OC_PASSWORD:?Falta MANAGER_OC_PASSWORD}
+      INTEGRITY_KEY: ${INTEGRITY_KEY:?Falta INTEGRITY_KEY}
+      CONTROL_AGENT_KEY: ${CONTROL_AGENT_KEY:?Falta CONTROL_AGENT_KEY}
+      FAILOVER_PAUSE_SECONDS: ${FAILOVER_PAUSE_SECONDS:-8}
+    volumes:
+    - certs:/certs:ro
+    depends_on:
+      db-global:
+        condition: service_healthy
+      router:
+        condition: service_started
+      legacy:
+        condition: service_started
+    networks:
+    - mesh
+  nfs-server:
+    image: erichough/nfs-server:latest
+    profiles:
+    - dfs
+    privileged: true
+    environment:
+      NFS_EXPORT_0: /exports *(rw,sync,no_subtree_check,no_root_squash)
+    volumes:
+    - nfs_data:/exports
+    restart: unless-stopped
+    networks:
+    - mesh
+  nfs-client:
+    image: alpine:3.20
+    profiles:
+    - dfs
+    privileged: true
+    command:
+    - sh
+    - -c
+    - apk add --no-cache nfs-utils && mkdir -p /mnt/shared && mount -t nfs -o vers=4 nfs-server:/exports /mnt/shared
+      && echo "NFS client READY" && tail -f /dev/null
+    depends_on:
+      nfs-server:
+        condition: service_started
+    networks:
+    - mesh
+volumes:
+  pg_global: {}
+  pg_af: {}
+  pg_eu: {}
+  pg_as: {}
+  pg_na: {}
+  pg_sa: {}
+  pg_oc: {}
+  certs: {}
+  nfs_data: {}
+networks:
+  mesh:
+    driver: bridge
