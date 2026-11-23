@@ -90,11 +90,25 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\INICIAR_WINDOWS.ps
 | Operador Maputo | `balcao.maputo@nandbank.local` | Balcão Maputo |
 | Cliente | Registo pela interface | Apenas as suas contas |
 
-As palavras-passe são geradas localmente durante a primeira instalação; o email e a palavra-passe correspondente aparecem em `.credentials`. Para compatibilidade com volumes antigos, os emails `@globalscale.local` anteriores continuam válidos enquanto os dados preexistentes forem conservados.
+As palavras-passe dos nove perfis internos são geradas localmente **apenas na primeira inicialização** quando `.env` ainda não existe. Aparecem em `.credentials` e **não mudam a cada arranque**. Quando a rede muda, o instalador actualiza o endereço dos telemóveis em `.credentials` sem substituir as palavras-passe. Para compatibilidade com volumes antigos, os emails `@globalscale.local` anteriores continuam válidos enquanto os dados preexistentes forem conservados.
+
+A sequência semelhante a uma palavra-passe que aparece depois do email do gerente global em `.credentials` **é a palavra-passe da sua conta de administração**, não é uma chave de API e **nunca deve ser colocada no README, GitHub, relatório, captura de ecrã ou mensagem pública**. O ficheiro `.credentials` e o `.env` estão excluídos do Git. Se já apareceram em documentos partilhados, altere-os também na base de dados: mudar apenas a variável em `.env` não substitui o hash de uma conta já criada.
+
+### Áreas de utilização
+
+| Perfil | Página inicial | Operações disponibilizadas |
+|---|---|---|
+| Cliente | `/cliente/visao-geral` | Contas próprias, transferências, cartões e movimentos |
+| Gerente regional | `/gerente/visao-geral` | Estado regional, operações, cartões e registos regionais de clientes |
+| Gerente global | `/gerente-global/visao-geral` | Rede completa, auditoria e gestão de todos os clientes |
+| Gerente de filial | `/filial/visao-geral` | Clientes, contas e operações da filial Maputo |
+| Operador de balcão | `/balcao/operacoes` | Depósito/levantamento em contas da filial, histórico autorizado |
+
+A área **Base de dados de clientes** permite consultar os registos e movimentos, actualizar nome e email, e alterar o estado com justificação: `ACTIVE`, `SUSPENDED`, `SUSPECT` ou `EXPIRED`. `EXPIRED` substitui a eliminação física por exclusão lógica: o titular recebe a mensagem **"Conta expirada!"** ao tentar entrar, e todos os seus saldos e registos de auditoria permanecem intactos. A suspensão também bloqueia sessões JWT existentes enquanto a conta estiver inactiva. Gerentes regionais/filiais só conseguem alterar clientes cujas contas estejam inteiramente no seu âmbito; se o cliente tiver contas fora dele, a alteração deve ser feita pelo gerente global.
 
 ## Guia rápido: Maputo → Lisboa e failover
 
-1. No PC, entrar como gerente África e depositar um montante fictício numa conta cliente de Maputo.
+1. No PC, entrar como **operador Maputo** ou **gerente de filial Maputo** e depositar um montante fictício numa conta cliente de Maputo. O gerente África continua a supervisionar os serviços regionais.
 2. No telemóvel 1, entrar como cliente de Maputo; no telemóvel 2, entrar como cliente com conta na filial Lisboa.
 3. Copiar o identificador da conta de Lisboa. No cliente Maputo, consultar câmbio e enviar uma transferência. O valor debitado é em **MZN**; o recebido é em **EUR**.
 4. Gerente regional abre **Nós continentais** e solicita **Desligar nó principal** para África, escolhendo motivo. O agente Windows fará a alteração autorizada; o painel e clientes recebem o estado de falha, e a standby assume.
@@ -103,12 +117,20 @@ As palavras-passe são geradas localmente durante a primeira instalação; o ema
 
 Se o agente estiver desligado, o backend recusa comandos pela interface; para um teste manual seguro, utilizar `docker compose stop af-primary` e `docker compose up -d --no-build af-primary` num PowerShell do servidor.
 
+### Acesso por telemóvel na mesma rede (não usar IP WSL)
+
+1. Liga o PC e o telemóvel à **mesma rede local privada** (não usar rede convidada ou isolamento entre clientes).
+2. No PowerShell do PC, usa `Get-NetIPConfiguration | Where-Object IPv4DefaultGateway` e escolhe o IPv4 do adaptador físico com gateway (Ethernet/Wi-Fi). Nunca uses `172.26.*` de vEthernet WSL nem `192.168.56.1` de VirtualBox.
+3. Executa o iniciador `INICIAR_WINDOWS.bat` para actualizar `LAN_IP` e o certificado académico para esse IPv4. O ficheiro `.credentials` passa a mostrar o endereço correcto sem mudar as palavras-passe.
+4. Numa rede privada de confiança, abre o PowerShell como Administrador e executa `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\PERMITIR_ACESSO_TELEMOVEIS.ps1`. A regra abre TCP 8443 **apenas para a sub-rede local e perfil Privado**.
+5. No telemóvel, abre `https://IPv4_REAL_DO_PC:8443`. Se houver erro de certificado, importa a CA académica para o dispositivo autorizado, ou realiza os ensaios no PC. **Não desligar TLS** nem abrir a porta na Internet.
+
 ## Testes
 
 **Sem Docker (sintaxe/estrutura):**
 
 ```powershell
-python VALIDAR_NANDBANK.py
+python ferramentas/VALIDAR_NANDBANK.py
 ```
 
 **Com Docker (transacções reais do protótipo e autorizações):**
@@ -117,7 +139,7 @@ python VALIDAR_NANDBANK.py
 .\TESTAR_TUDO_WINDOWS.bat
 ```
 
-Este script executa `app.smoke` (2PC, idempotência, ACID local, saldos e PDF) e `app.nandbank_smoke` (pedidos e aprovação de cartões, congelamento, autorização regional, acesso aos assets e protecção de nós). Os testes geram apenas contas fictícias.
+Este script executa `app.smoke` (2PC, idempotência, ACID local, saldos e PDF) e `app.nandbank_smoke` (pedidos e aprovação de cartões, congelamento, **gestão lógica de clientes/expiração/reactivação**, autorização regional, acesso aos assets React e protecção de nós). Os testes geram apenas contas fictícias.
 
 **Failover automatizado original:**
 
@@ -132,7 +154,7 @@ docker compose ps
 docker compose logs --tail=70 gateway router af-primary af-standby db-af
 ```
 
-**Nota sobre verificação:** o projecto pode passar verificações estáticas sem ter sido executado end-to-end neste ambiente. A execução real dos contentores e o comportamento da Firewall, certificados, telemóveis e host-agent têm de ser validados no Windows. Consultar `docs/RELATORIO_VALIDACAO.md`.
+**Nota sobre verificação:** o projecto pode passar verificações estáticas sem ter sido executado end-to-end neste ambiente. A execução real dos contentores e o comportamento da Firewall, certificados, telemóveis e host-agent têm de ser validados no Windows. A publicação no GitHub não equivale a um teste real de failover, replicação de PostgreSQL ou NFS. Consultar `docs/RELATORIO_VALIDACAO.md`.
 
 ## Publicar no GitHub + GitHub Pages
 

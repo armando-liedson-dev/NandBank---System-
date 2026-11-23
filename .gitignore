@@ -40,3 +40,24 @@ backups/
 *.pid
 .nandbank-*
 frontend-premium-source/backup-*/
+
+# Scripts SQL de esquema são codigo-fonte, nao dumps privados.
+!infra/sql/global.sql
+!infra/sql/regional.sql
+
+# Pacote de correccoes descompactado (nunca versionar por engano).
+NandBank_FINAL/
+NandBank_PATCH/
+.env
+.env.*
+!.env.example
+.private-backups/
+__pycache__/
+*.pyc
+node_modules/
+dist/
+build/
+*.log
+certs/
+*.key
+*.pem

@@ -1,5 +1,7 @@
 import type {
   GatewayCard,
+  GatewayCustomer,
+  GatewayCustomerActivity,
   GatewayConfig,
   GatewayErrorPayload,
   GatewayMe,
@@ -71,16 +73,16 @@ function messageFromPayload(payload: unknown): string | null {
 function statusMessage(status: number, detail: string | null): string {
   if (status === 406) return "Servidor indisponível. Esta pré-visualização não está ligada ao Gateway FastAPI.";
   if (status === 401) return "A sessão terminou. Entre novamente para continuar.";
-  if (status === 403) return "O seu perfil não tem autorização para esta operação.";
+  if (status === 403) return detail ?? "O seu perfil não tem autorização para esta operação.";
   if (status === 404) return detail ?? "A informação pedida não foi encontrada.";
   if (status === 409) return detail ?? "Esta operação já existe ou precisa de ser revista.";
   if (status === 422 || status === 400) return detail ?? "Verifique os dados preenchidos.";
-  if (status === 503) return "O servidor bancário ou um serviço regional está indisponível.";
+  if (status === 503) return detail ?? "O servidor bancário ou um serviço regional está indisponível.";
   if (status >= 500) return "O servidor não conseguiu concluir o pedido.";
   return detail ?? "Não foi possível concluir o pedido.";
 }
 
-async function request<T>(path: string, init: RequestInit = {}, timeoutMs = 12_000): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}, timeoutMs = 30_000): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const headers = new Headers(init.headers);
@@ -204,6 +206,24 @@ export const gateway = {
   failover: () => get<GatewayNode[]>("/api/failover/status"),
   operations: () => get<unknown[]>("/api/admin/operations"),
   adminAccounts: () => get<unknown[]>("/api/admin/accounts"),
+  customers: () => get<GatewayCustomer[]>("/api/admin/customers"),
+  customerActivity: (id: string) => get<GatewayCustomerActivity>(`/api/admin/customers/${encodeURIComponent(id)}/activity`),
+  updateCustomer: (id: string, name: string, email: string) =>
+    request<{ ok: boolean; customer_id: string }>(`/api/admin/customers/${encodeURIComponent(id)}`, {
+      method: "PATCH", body: JSON.stringify({ name, email }),
+    }),
+  setCustomerStatus: (id: string, status: "ACTIVE" | "SUSPENDED" | "SUSPECT" | "EXPIRED", reason: string) =>
+    request<{ ok: boolean; status: string; message: string }>(`/api/admin/customers/${encodeURIComponent(id)}/status`, {
+      method: "PATCH", body: JSON.stringify({ status, reason }),
+    }),
+  permanentlyDeleteEmptyCustomer: (id: string, confirmation_email: string) =>
+    request<{ ok: boolean; deleted: boolean; customer_id: string }>(`/api/admin/customers/${encodeURIComponent(id)}/permanent-delete`, {
+      method: "POST", body: JSON.stringify({ confirmation_email }),
+    }, 40_000),
+  tellerDeposit: (account_id: string, amount: string, currency: string, idempotency_key: string) =>
+    request<{ ok: boolean; operation_id: string; balance_minor: number }>("/api/teller/deposit", { method: "POST", body: JSON.stringify({ account_id, amount, currency, idempotency_key }) }, 45_000),
+  tellerWithdraw: (account_id: string, amount: string, currency: string, idempotency_key: string) =>
+    request<{ ok: boolean; operation_id: string; balance_minor: number }>("/api/teller/withdraw", { method: "POST", body: JSON.stringify({ account_id, amount, currency, idempotency_key }) }, 45_000),
   pendingCards: () => get<GatewayCard[]>("/api/admin/cards"),
   reviewCard: (id: string, approved: boolean) =>
     post<{ ok: boolean; status: string }>(`/api/admin/cards/${encodeURIComponent(id)}/review`, {
@@ -224,12 +244,14 @@ export const gateway = {
   receipt: (id: string) => requestBlob(`/api/transactions/${encodeURIComponent(id)}/receipt.pdf`),
 };
 
-export type RoleHome = "/cliente/visao-geral" | "/gerente/visao-geral" | "/gerente-global/visao-geral";
+export type RoleHome = "/cliente/visao-geral" | "/gerente/visao-geral" | "/gerente-global/visao-geral" | "/filial/visao-geral" | "/balcao/operacoes";
 
 export function roleHome(role: GatewayRole): RoleHome | null {
   if (role === "client") return "/cliente/visao-geral";
   if (role === "global_manager") return "/gerente-global/visao-geral";
   if (role === "regional_manager") return "/gerente/visao-geral";
+  if (role === "branch_manager") return "/filial/visao-geral";
+  if (role === "teller") return "/balcao/operacoes";
   return null;
 }
 

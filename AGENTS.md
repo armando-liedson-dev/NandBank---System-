@@ -20,7 +20,7 @@ Este ficheiro organiza o projecto para uso no Codex quando o utilizador o abrir 
 ## Testes obrigatórios antes de qualquer entrega
 
 1. `python -m compileall backend/app infra/certgen.py`
-2. `node --check frontend/static/app.js`
+2. `node tests/test_live_frontend.cjs`
 3. `javac --add-modules jdk.httpserver -d <tmp> infra/legacy/src/main/java/mz/globalscale/LegacyServer.java`
 4. `docker compose config --quiet`
 5. `docker compose up -d --no-build` após as imagens.
@@ -42,5 +42,5 @@ Este ficheiro organiza o projecto para uso no Codex quando o utilizador o abrir 
 - Cartões académicos exigem aprovação; não gerar PAN/CVV reais.
 - Nó principal controlado por agente Windows restrito, sem `docker.sock` no Gateway.
 - Migrações incrementais e preservação de volumes obrigatórias.
-- Executar `VALIDAR_NANDBANK.py`, `node tests/test_pages.cjs`, testes unitários de contrato e os testes Docker reais na máquina Windows.
+- Executar `ferramentas/VALIDAR_NANDBANK.py`, `node tests/test_pages.cjs`, testes unitários de contrato e os testes Docker reais na máquina Windows.
 - Não afirmar testes integrados validados sem logs reais.

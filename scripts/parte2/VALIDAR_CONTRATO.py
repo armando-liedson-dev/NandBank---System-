@@ -28,7 +28,8 @@ REQUIRED = {
     ('GET','/api/admin/cards'), ('POST','/api/admin/cards/{card_id}/review'),
     ('GET','/api/failover/status'), ('GET','/api/admin/stats'),
     ('GET','/api/admin/nodes'), ('GET','/api/admin/operations'),
-    ('GET','/api/admin/accounts'), ('GET','/api/admin/node-actions'),
+    ('GET','/api/admin/accounts'), ('GET','/api/admin/customers'),
+    ('GET','/api/admin/customers/{customer_id}/activity'),('PATCH','/api/admin/customers/{customer_id}'),('PATCH','/api/admin/customers/{customer_id}/status'), ('GET','/api/admin/node-actions'),
     ('POST','/api/admin/nodes/{code}/action'), ('GET','/api/admin/audit'),
 }
 

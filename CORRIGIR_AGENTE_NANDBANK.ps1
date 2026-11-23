@@ -1,0 +1,95 @@
+$ErrorActionPreference = 'Stop'
+$root = (Get-Location).Path
+$agent = Join-Path $root 'scripts\AGENTE_NOS_WINDOWS.ps1'
+if (-not (Test-Path $agent)) { throw "Execute na pasta raiz NandBank: $agent" }
+$backup = "$agent.bak-$(Get-Date -Format yyyyMMdd-HHmmss)"
+Copy-Item -LiteralPath $agent -Destination $backup
+$script = @'
+$ErrorActionPreference = 'Stop'
+Set-Location -LiteralPath (Split-Path -Parent $PSScriptRoot)
+$allowed = @('af','eu','as','na','sa','oc')
+$line = Get-Content '.env' | Where-Object { $_ -match '^CONTROL_AGENT_KEY=' } | Select-Object -First 1
+if (-not $line) { throw 'CONTROL_AGENT_KEY ausente em .env' }
+$key = $line.Substring('CONTROL_AGENT_KEY='.Length).Trim().Trim('"').Trim("'")
+if (-not $key) { throw 'CONTROL_AGENT_KEY vazio' }
+$base = 'https://127.0.0.1:8443/api/agent'
+$log = Join-Path (Get-Location).Path 'agente-nandbank.log'
+function Log([string]$msg) {
+  $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $msg"
+  Add-Content -LiteralPath $log -Value $line -Encoding UTF8
+}
+function CurlJson([string[]]$args) {
+  $response = & curl.exe @args 2>&1
+  $code = $LASTEXITCODE
+  if ($code -ne 0) { throw "curl exit=$code $($response -join ' ')" }
+  return ($response -join "`n")
+}
+Log 'Agente iniciado'
+while ($true) {
+  try {
+    $raw = CurlJson @('-k','-sS','--fail-with-body','--max-time','8','-H',"X-Agent-Key: $key","$base/jobs")
+    $jobs = @($raw | ConvertFrom-Json)
+    foreach ($job in $jobs) {
+      if ($null -eq $job -or $allowed -notcontains $job.region -or $job.action -notin @('STOP_PRIMARY','START_PRIMARY')) { continue }
+      $service = "$($job.region)-primary"
+      Log "Pedido $($job.id): $($job.action) $service"
+      $ok = $false
+      $result = ''
+      try {
+        if ($job.action -eq 'STOP_PRIMARY') {
+          $output = & docker compose stop -t 30 $service 2>&1
+        } else {
+          $output = & docker compose up -d --no-build $service 2>&1
+        }
+        $exitCode = $LASTEXITCODE
+        $result = ($output | Out-String).Trim()
+        $ok = ($exitCode -eq 0)
+        Log "Docker exit=$exitCode $service"
+      } catch {
+        $result = $_.Exception.Message
+        Log "ERRO Docker: $result"
+      }
+      $body = @{ ok = [bool]$ok; result = [string]$result.Substring(0,[Math]::Min(480,$result.Length)) } | ConvertTo-Json -Compress
+      $tmp = Join-Path $env:TEMP ("nandbank-agent-" + [guid]::NewGuid().ToString('N') + '.json')
+      try {
+        [System.IO.File]::WriteAllText($tmp,$body,(New-Object System.Text.UTF8Encoding($false)))
+        $confirmed = $false
+        for ($attempt=1; $attempt -le 3; $attempt++) {
+          try {
+            $reply = CurlJson @('-k','-sS','--fail-with-body','--max-time','10','-X','POST','-H',"X-Agent-Key: $key",'-H','Content-Type: application/json','--data-binary',"@$tmp","$base/jobs/$($job.id)/result")
+            Log "CONFIRMADO job=$($job.id) ok=$ok resposta=$reply"
+            $confirmed = $true
+            break
+          } catch {
+            Log "FALHA CONFIRMACAO tentativa=$attempt job=$($job.id): $($_.Exception.Message)"
+            Start-Sleep -Seconds 2
+          }
+        }
+        if (-not $confirmed) { Log "ATENCAO: job $($job.id) continua sem confirmacao" }
+      } finally {
+        Remove-Item -LiteralPath $tmp -ErrorAction SilentlyContinue
+      }
+    }
+  } catch {
+    Log "ERRO consulta: $($_.Exception.Message)"
+  }
+  Start-Sleep -Seconds 3
+}
+'@
+[System.IO.File]::WriteAllText($agent,$script,(New-Object System.Text.UTF8Encoding($false)))
+Write-Host "Backup: $backup" -ForegroundColor Green
+Write-Host 'Agente corrigido. A reiniciar tarefa...' -ForegroundColor Cyan
+$task = 'NandBank-Agente-Nos'
+if (-not (Get-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue)) { throw 'Tarefa nao encontrada; o ficheiro foi corrigido, mas a tarefa precisa ser iniciada manualmente.' }
+Stop-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 3
+$old = Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'powershell.exe' -and $_.CommandLine -like '*AGENTE_NOS_WINDOWS.ps1*' }
+foreach ($p in $old) { Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue }
+Start-ScheduledTask -TaskName $task
+Start-Sleep -Seconds 12
+Get-ScheduledTask -TaskName $task | Select-Object TaskName,State
+Write-Host "`n=== LOG AGENTE ===" -ForegroundColor Cyan
+if (Test-Path '.\agente-nandbank.log') { Get-Content '.\agente-nandbank.log' -Tail 18 }
+Write-Host "`n=== NOS AFRICA ===" -ForegroundColor Cyan
+docker compose ps -a af-primary af-standby
+Write-Host 'Actualize a pagina de infraestrutura.' -ForegroundColor Green

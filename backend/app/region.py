@@ -3,12 +3,12 @@ from __future__ import annotations
 import os,uuid,ssl,logging,json
 from contextlib import contextmanager
 from typing import Literal
-from fastapi import FastAPI,Depends,HTTPException
+from fastapi import FastAPI,Depends,HTTPException,Header
 from pydantic import BaseModel,Field
 from psycopg import sql
 from psycopg.errors import UniqueViolation
 from .db import connect
-from .security import bearer
+from .security import verify_token
 
 logging.basicConfig(level=logging.INFO)
 REGION=os.environ['REGION']
@@ -16,9 +16,15 @@ INSTANCE=os.getenv('INSTANCE','primary')
 DB_HOST=os.environ['DB_HOST']
 app=FastAPI(title=f'GlobalScale Participante {REGION}',docs_url=None,redoc_url=None)
 
-def system(c=Depends(bearer)):
-    if c['role']!='system':raise HTTPException(403,'Serviço interno apenas')
-    return c
+def system(authorization: str | None = Header(default=None)):
+    # As bases regionais nao contem a tabela users. O token do Gateway e
+    # verificado criptograficamente sem consultar utilizadores locais.
+    if not authorization or not authorization.startswith('Bearer '):
+        raise HTTPException(401,'Autenticacao de servico necessaria')
+    claims=verify_token(authorization[7:])
+    if claims.get('role')!='system' or claims.get('sub')!='global-coordinator':
+        raise HTTPException(403,'Servico interno apenas')
+    return claims
 
 def db():return connect(DB_HOST)
 
@@ -71,6 +77,27 @@ def create_account(a:NewAccount,_=Depends(system)):
     with db() as c:
         c.execute('INSERT INTO accounts(id,owner_id,branch,currency) VALUES (%s,%s,%s,%s) ON CONFLICT(id) DO NOTHING',(a.id,a.owner_id,a.branch,a.currency))
     return {'ok':True,'id':a.id,'region':REGION}
+
+@app.post('/internal/accounts/{account_id}/purge-empty-test')
+def purge_empty_test_account(account_id:str,_=Depends(system)):
+    # Apenas contas vazias e sem movimentos; nunca remover movimentos do diario.
+    with db() as c:
+        c.execute('BEGIN')
+        try:
+            row=c.execute('SELECT id,balance_minor FROM accounts WHERE id=%s FOR UPDATE',(account_id,)).fetchone()
+            if not row:
+                c.execute('COMMIT')
+                return {'ok':True,'already_absent':True}
+            if int(row['balance_minor'])!=0:
+                raise HTTPException(409,'Conta com saldo: eliminação definitiva bloqueada')
+            if c.execute('SELECT 1 FROM ledger WHERE account_id=%s LIMIT 1',(account_id,)).fetchone():
+                raise HTTPException(409,'Conta com movimentos: eliminação definitiva bloqueada')
+            c.execute('DELETE FROM accounts WHERE id=%s',(account_id,))
+            c.execute('COMMIT')
+            return {'ok':True,'deleted':True}
+        except Exception:
+            c.execute('ROLLBACK')
+            raise
 
 @app.get('/internal/accounts/{account_id}')
 def account(account_id:str,_=Depends(system)):

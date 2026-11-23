@@ -17,8 +17,15 @@ try {
     Run-Docker 'Verificar Docker Desktop' @('info','--format','{{.ServerVersion}}')
     if (-not $LanIP) {
         try {
-            $adapter=Get-NetIPConfiguration | Where-Object {$_.IPv4DefaultGateway -and $_.IPv4Address} | Select-Object -First 1
-            $LanIP=($adapter.IPv4Address | Select-Object -First 1).IPAddress
+            # Ignorar interfaces WSL/Docker/VirtualBox e redes sem gateway real.
+            $adapters=Get-NetIPConfiguration | Where-Object {
+              $_.IPv4DefaultGateway -and $_.IPv4Address -and
+              $_.InterfaceAlias -notmatch 'vEthernet|WSL|Docker|VirtualBox|Loopback'
+            }
+            foreach ($adapter in $adapters) {
+              $candidate=($adapter.IPv4Address | Select-Object -First 1).IPAddress
+              if ($candidate -and $candidate -notmatch '^169\.254\.') { $LanIP=$candidate; break }
+            }
         } catch {}
     }
     if (-not $LanIP){$LanIP='127.0.0.1'}
@@ -56,6 +63,15 @@ try {
         } else {$envtxt += "`nLAN_IP=$LanIP`n";$changedIP=$true}
         Set-Content -Path .env -Value $envtxt -Encoding ASCII
     }
+    # Manter a indicação de acesso móvel coerente com a rede actual.
+    # Nunca recriar as palavras-passe nem escrever segredos no terminal.
+    if (Test-Path .credentials) {
+        $lines=Get-Content .credentials
+        $lines=@($lines | ForEach-Object {
+            if ($_ -match '^Telemoveis:') { "Telemoveis: https://${LanIP}:8443" } else { $_ }
+        })
+        $lines | Set-Content -Encoding UTF8 .credentials
+    }
     # Garantir chave do agente ao actualizar uma instalação antiga (sem recriar os segredos existentes).
     $envtxt = Get-Content -Raw .env
     if ($envtxt -notmatch '(?m)^CONTROL_AGENT_KEY=') {
@@ -92,7 +108,9 @@ try {
     Write-Host "`nAbra no PC: https://localhost:8443" -ForegroundColor Green
     Write-Host "Telemoveis na mesma rede: https://${LanIP}:8443" -ForegroundColor Green
     Write-Host 'Credenciais de gerente: Get-Content .credentials' -ForegroundColor Yellow
-    Write-Host 'Nota: certificados academicos exigem confiar na CA de teste nos telemoveis.' -ForegroundColor Yellow
+    Write-Host 'Nota: para telemoveis, confirme mesma LAN, perfil de rede Privada e regra Firewall local 8443.' -ForegroundColor Yellow
+    Write-Host 'Use scripts\PERMITIR_ACESSO_TELEMOVEIS.ps1 (como Admin, apenas rede privada).' -ForegroundColor Yellow
+    Write-Host 'Certificados academicos exigem confiar na CA de teste apenas em dispositivos autorizados.' -ForegroundColor Yellow
 } catch {
     Write-Host "`nERRO: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host 'Para diagnostico: docker compose ps; docker compose logs --tail=40 gateway router db-global' -ForegroundColor Yellow

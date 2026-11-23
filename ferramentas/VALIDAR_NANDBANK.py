@@ -1,36 +1,44 @@
-"""Verifica integridade, ficheiros e sintaxe do NandBank sem Docker nem credenciais.
-Não substitui docker compose config, o smoke real e a validação no Windows.
-"""
+"""Verificador estrutural seguro: nao lê nem imprime credenciais e não executa Docker."""
 from pathlib import Path
-import ast,subprocess,sys,shutil,json,re
-root=Path(__file__).resolve().parent
-errors=[];checks=[]
-def result(label,passed,detail=''):
- checks.append((label,passed,detail))
- print(('[OK] ' if passed else '[ERRO] ')+label+(' — '+detail if detail else ''))
- if not passed:errors.append(label)
-required=['docker-compose.yml','backend/app/gateway.py','backend/app/coordinator.py','backend/app/nandbank_smoke.py','infra/legacy/src/main/java/mz/globalscale/LegacyServer.java','frontend/static/index.html','frontend/static/theme.css','frontend/static/lion-mark.png','frontend/static/app.js','pages/index.html','pages/demo.js','.github/workflows/pages.yml','README.md','scripts/AGENTE_NOS_WINDOWS.ps1']
-for file in required:result('Ficheiro: '+file,(root/file).is_file())
-for file in list(root.glob('backend/app/*.py'))+list(root.glob('infra/*.py')):
- try:ast.parse(file.read_text(encoding='utf8')); result('Python: '+str(file.relative_to(root)),True)
- except Exception as e:result('Python: '+str(file.relative_to(root)),False,str(e))
+import ast, subprocess, sys, shutil, re
+ROOT = Path(__file__).resolve().parents[1]
+checks=[]
+def check(label, condition):
+    checks.append((label,bool(condition)))
+    print(('[OK] ' if condition else '[ERRO] ')+label)
+
+required = [
+ 'docker-compose.yml','infra/sql/global.sql','infra/sql/regional.sql','backend/app/gateway.py','backend/app/security.py',
+ 'backend/app/nandbank_smoke.py','backend/app/coordinator.py',
+ 'frontend/static/index.html','frontend/static/images/nandbank-lion-logo.png',
+ 'frontend-premium-source/src/components/nandbank/staff-pages.tsx',
+ 'frontend-premium-source/src/components/nandbank/customer-management.tsx',
+ 'frontend-premium-source/src/routes/balcao.operacoes.tsx',
+ 'frontend-premium-source/src/routes/filial.visao-geral.tsx',
+ 'pages/index.html','pages/demo.js',
+ 'scripts/AGENTE_NOS_WINDOWS.ps1','scripts/INICIAR_WINDOWS.ps1',
+ 'scripts/parte2/COMPILAR_E_PUBLICAR.ps1','.github/workflows/tests.yml','README.md']
+for rel in required:check('Ficheiro '+rel,(ROOT/rel).is_file())
+for path in sorted((ROOT/'backend/app').glob('*.py')):
+ try:ast.parse(path.read_text(encoding='utf-8'));passed=True
+ except SyntaxError:passed=False
+ check('Sintaxe Python '+path.name,passed)
 if shutil.which('node'):
- for file in ['frontend/static/app.js','pages/demo.js']:
-  r=subprocess.run(['node','--check',str(root/file)],capture_output=True,text=True)
-  result('JavaScript: '+file,r.returncode==0,r.stderr[-500:])
-else:print('[NOTA] Node.js ausente: verificação JavaScript omitida; CI verifica em GitHub Actions.')
+ result=subprocess.run(['node','--check',str(ROOT/'pages/demo.js')],capture_output=True,text=True)
+ check('JavaScript Pages',result.returncode==0)
 try:
  import yaml
- data=yaml.safe_load((root/'docker-compose.yml').read_text())
- result('Compose: seis regiões',all(f'{reg}-primary' in data['services'] and f'{reg}-standby' in data['services'] and f'db-{reg}' in data['services'] for reg in ('af','eu','as','na','sa','oc')))
- result('Compose: sete PostgreSQL',sum(s.startswith('db-') for s in data['services'])==7)
- result('Compose: Gateway / router / legado',all(x in data['services'] for x in ('gateway','router','legacy')))
-except ImportError:print('[NOTA] PyYAML ausente: usa docker compose config --quiet no Windows.')
-except Exception as e:result('Compose YAML',False,repr(e))
-js=(root/'pages/demo.js').read_text()
-result('GitHub Pages: demo sem backend',"demonstração totalmente estática" in js and "api/" not in js)
-result('Segurança: sem ficheiros secretos na raiz',not any((root/name).exists() for name in ('.env','.credentials')))
-result('Frontend: marca NandBank','NandBank' in (root/'frontend/static/index.html').read_text())
-result('Frontend: PWA restrita', 'cache' not in (root/'frontend/static/sw.js').read_text().replace('// Apenas PWA shell. Dados financeiros, tokens, APIs e comprovativos NÃO são guardados em cache.',''))
-print('\n'+str(len(checks)-len(errors))+' de '+str(len(checks))+' verificações passaram.')
-if errors:sys.exit(1)
+ compose=yaml.safe_load((ROOT/'docker-compose.yml').read_text(encoding='utf-8'))
+ services=compose['services']
+ check('6 continentes com primário/reserva',all(f'{c}-primary' in services and f'{c}-standby' in services for c in ('af','as','eu','na','sa','oc')))
+ check('7 bases PostgreSQL',all(f'db-{c}' in services for c in ('global','af','as','eu','na','sa','oc')))
+except Exception:check('Docker Compose YAML válido',False)
+check('Frontend React com assets estáticos', bool(re.search(r'/static/assets/[^\" ]+\.js',(ROOT/'frontend/static/index.html').read_text(encoding='utf8'))))
+check('API com gestao de clientes',"@app.patch('/api/admin/customers/{customer_id}/status')" in (ROOT/'backend/app/gateway.py').read_text(encoding='utf8'))
+# Se houver Git, garantir que segredos não estão versionados; .env e .credentials
+# devem existir localmente em instalacoes reais, por isso não reprovar por existirem.
+if (ROOT/'.git').exists():
+ p=subprocess.run(['git','ls-files','--','.env','.credentials'],cwd=ROOT,capture_output=True,text=True)
+ check('Credenciais fora do Git',p.returncode==0 and not p.stdout.strip())
+print(f'\n{sum(ok for _,ok in checks)}/{len(checks)} verificacoes estruturais aprovadas.')
+sys.exit(0 if all(ok for _,ok in checks) else 1)

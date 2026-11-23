@@ -1,0 +1,115 @@
+# NandBank - pacote de correccoes (Windows PowerShell 5.1+)
+# Executar a partir do projecto: powershell -NoProfile -ExecutionPolicy Bypass -File .\CORRECAO_NANDBANK\INSTALAR_CORRECOES_NANDBANK.ps1
+# Nao elimina bases de dados, volumes, saldos ou historico.
+$ErrorActionPreference = 'Stop'
+$pack = $PSScriptRoot
+$root = Split-Path -Parent $pack
+if (-not (Test-Path -LiteralPath (Join-Path $root 'docker-compose.yml'))) {
+    throw 'Coloque a pasta CORRECAO_NANDBANK dentro da pasta raiz do projecto NandBank.'
+}
+$backup = Join-Path $root ('.private-backups\correcao-integral-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+New-Item -ItemType Directory -Force -Path $backup | Out-Null
+$manifest = @(
+  'backend\app\region.py',
+  'backend\app\gateway.py',
+  'scripts\AGENTE_NOS_WINDOWS.ps1',
+  'frontend-premium-source\src\components\nandbank\brand.tsx',
+  'frontend-premium-source\src\components\nandbank\manager-pages.tsx',
+  'frontend-premium-source\src\components\nandbank\customer-management.tsx',
+  'frontend-premium-source\src\services\api\client.ts',
+  'frontend-premium-source\src\styles.css',
+  'frontend-premium-source\public\images\nandbank-lion-black.png'
+)
+Write-Host '=== 1/5 BACKUPS E CORRECOES ===" -ForegroundColor Cyan
+Write-Host '=== 1/5 BACKUPS E CORRECOES ===' -ForegroundColor Cyan
+    $src = Join-Path $pack ('ficheiros\' + $rel)
+    $dst = Join-Path $root $rel
+    if (-not (Test-Path -LiteralPath $src)) { throw "Pacote incompleto: $rel" }
+    if (Test-Path -LiteralPath $dst) {
+        $bak = Join-Path $backup $rel
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $bak) | Out-Null
+        Copy-Item -LiteralPath $dst -Destination $bak -Force
+    }
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null
+    Copy-Item -LiteralPath $src -Destination $dst -Force
+}
+# Mantem uma copia do frontend pronto anteriormente.
+$static = Join-Path $root 'frontend\static'
+if (Test-Path -LiteralPath $static) {
+    Copy-Item -LiteralPath $static -Destination (Join-Path $backup 'frontend-static') -Recurse -Force
+}
+Write-Host "Backup: $backup" -ForegroundColor Green
+
+function Executar {
+  param([Parameter(Mandatory=$true)][string]$Programa,
+        [Parameter(Mandatory=$true)][string[]]$Argumentos)
+  # PowerShell 5.1 trata mensagens informativas no stderr de executaveis como erros.
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+     & $Programa @Argumentos 2>&1 | Out-Host
+     $code = $LASTEXITCODE
+  } finally { $ErrorActionPreference = $previous }
+  if ($code -ne 0) { throw "$Programa falhou (codigo $code): $($Argumentos -join ' ')" }
+}
+
+Write-Host "`n=== 2/5 COMPILAR FRONTEND ===" -ForegroundColor Cyan
+$source = Join-Path $root 'frontend-premium-source'
+Push-Location -LiteralPath $source
+try {
+    if (-not (Test-Path -LiteralPath '.\node_modules\vite\bin\vite.js')) {
+        Write-Host 'Instalando dependencias npm...' -ForegroundColor Yellow
+        Executar -Programa 'npm.cmd' -Argumentos @('ci','--no-audit','--no-fund')
+    }
+    Executar -Programa 'npm.cmd' -Argumentos @('run','build:gateway')
+} finally { Pop-Location }
+$dist = Join-Path $source 'dist-gateway'
+if (-not (Test-Path -LiteralPath (Join-Path $dist 'index.html'))) { throw 'Frontend nao gerou dist-gateway/index.html' }
+if (-not (Test-Path -LiteralPath (Join-Path $dist 'images\nandbank-lion-black.png'))) { throw 'Imagem preta em falta no build!' }
+if (-not (Test-Path -LiteralPath $static)) { New-Item -ItemType Directory -Force -Path $static | Out-Null }
+Get-ChildItem -LiteralPath $static -Force | Remove-Item -Recurse -Force
+Copy-Item -Path (Join-Path $dist '*') -Destination $static -Recurse -Force
+Write-Host 'Frontend compilado e actualizado.' -ForegroundColor Green
+
+Write-Host "`n=== 3/5 TESTAR E CONSTRUIR IMAGEM DOCKER ===" -ForegroundColor Cyan
+Push-Location -LiteralPath $root
+try {
+    Executar -Programa 'docker' -Argumentos @('compose','config','-q')
+    Executar -Programa 'docker' -Argumentos @('compose','build','gateway')
+    Write-Host "`n=== 4/5 ACTUALIZAR PARTICIPANTES SEM APAGAR VOLUMES ===" -ForegroundColor Cyan
+    # Alterna um processo de cada vez. A base PostgreSQL e compartilhada por principal/secundario.
+    foreach ($r in @('af','eu','as','na','sa','oc')) {
+        foreach ($side in @('standby','primary')) {
+            $svc = "$r-$side"
+            Executar -Programa 'docker' -Argumentos @('compose','up','-d','--no-deps','--force-recreate',$svc)
+            Start-Sleep -Seconds 2
+            $cid = (& docker compose ps -q $svc | Out-String).Trim()
+            if (-not $cid) { throw "$svc nao ficou em execucao. Verifique logs." }
+            Write-Host "$svc actualizado" -ForegroundColor Green
+        }
+    }
+    Executar -Programa 'docker' -Argumentos @('compose','up','-d','--no-deps','--force-recreate','gateway')
+    Start-Sleep -Seconds 8
+    Write-Host "`n=== 5/5 VALIDACAO ===" -ForegroundColor Cyan
+    Executar -Programa 'docker' -Argumentos @('compose','ps','gateway','af-primary','af-standby','db-af')
+    # Prova que a autenticacao interna funciona. Caso falhe, os erros concretos sao mostrados.
+    foreach ($r in @('af','eu','as','na','sa','oc')) {
+        Write-Host "A verificar GET /internal/stats da regiao $r..." -ForegroundColor Yellow
+        $py = "from app.coordinator import call; print(call('$r','/internal/stats',method='GET'))"
+        Executar -Programa 'docker' -Argumentos @('compose','exec','-T','gateway','python','-c',$py)
+    }
+    Write-Host 'Gateway e acessos regionais validados.' -ForegroundColor Green
+} finally { Pop-Location }
+
+# Recarregar exclusivamente o agente (as intervencoes antigas FAILED continuam no historico).
+if (Get-ScheduledTask -TaskName 'NandBank-Agente-Nos' -ErrorAction SilentlyContinue) {
+    Stop-ScheduledTask -TaskName 'NandBank-Agente-Nos' -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 3
+    Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" | Where-Object {
+        $_.ProcessId -ne $PID -and $_.CommandLine -match 'AGENTE_NOS_WINDOWS\.ps1'
+    } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    Start-ScheduledTask -TaskName 'NandBank-Agente-Nos'
+}
+Write-Host "`nCORRECOES APLICADAS. BACKUP: $backup" -ForegroundColor Green
+Write-Host 'Abra https://localhost:8443/ e carregue Ctrl+Shift+R no browser.' -ForegroundColor Green
+Write-Host 'Teste primeiro uma consulta de saldo e um pequeno deposito ficticio.' -ForegroundColor Yellow

@@ -1,40 +1,101 @@
-# NandBank — agente de manutenção controlada, só no PC Windows onde Docker Desktop corre.
-# O backend não recebe acesso ao socket Docker. Autenticação pelo segredo local .env.
-$ErrorActionPreference = 'Continue'
-Set-Location -LiteralPath (Split-Path -Parent $PSScriptRoot)
-$allowed = @('af','eu','as','na','sa','oc')
-$line = Get-Content .env | Where-Object { $_ -match '^CONTROL_AGENT_KEY=' } | Select-Object -First 1
-if (-not $line) { Write-Host 'CONTROL_AGENT_KEY ausente em .env'; exit 1 }
-$key = $line.Substring('CONTROL_AGENT_KEY='.Length)
-if ([string]::IsNullOrWhiteSpace($key)) { Write-Host 'Segredo do agente vazio.'; exit 1 }
-$headers = @{'X-Agent-Key'=$key}
-# Certificado auto-assinado permitido SOMENTE para 127.0.0.1, não para hosts externos.
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-[System.Net.ServicePointManager]::ServerCertificateValidationCallback = { param($sender,$cert,$chain,$errors) return $true }
+$ErrorActionPreference = 'Stop'
+$root = Split-Path -Parent $PSScriptRoot
+Set-Location -LiteralPath $root
+$regions = @('af','eu','as','na','sa','oc')
+$envLine = Get-Content -LiteralPath (Join-Path $root '.env') | Where-Object { $_ -match '^CONTROL_AGENT_KEY=' } | Select-Object -First 1
+if (-not $envLine) { throw 'CONTROL_AGENT_KEY ausente' }
+$key = $envLine.Substring('CONTROL_AGENT_KEY='.Length).Trim().Trim('"').Trim("'")
+if ([string]::IsNullOrWhiteSpace($key)) { throw 'CONTROL_AGENT_KEY vazio' }
 $base = 'https://127.0.0.1:8443/api/agent'
-Write-Host 'Agente NandBank activo. Prima Ctrl+C para parar.'
+$logFile = Join-Path $root 'agente-nandbank.log'
+function Log([string]$message) {
+  Add-Content -LiteralPath $logFile -Encoding UTF8 -Value ("$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $message")
+}
+# IMPORTANTE: nao chamar parametro $args (variavel automatica do PowerShell).
+function Invoke-CurlNandBank {
+  param([Parameter(Mandatory=$true)][string[]]$CurlArguments)
+  $response = & curl.exe @CurlArguments 2>&1
+  $exit = $LASTEXITCODE
+  $out = ($response | Out-String).Trim()
+  if ($exit -ne 0) { throw "curl falhou codigo=$exit texto=$out" }
+  return $out
+}
+function ContainerState([string]$service) {
+  $cid = (& docker compose ps -q -a $service 2>&1 | Out-String).Trim()
+  if ($LASTEXITCODE -ne 0) { throw "Nao foi possivel consultar Docker $service" }
+  if (-not $cid) { return 'missing' }
+  $state = (& docker inspect --format '{{.State.Status}}' $cid 2>&1 | Out-String).Trim()
+  if ($LASTEXITCODE -ne 0) { throw "Nao foi possivel inspeccionar $service" }
+  return $state
+}
+Log 'NOVO AGENTE iniciado com parametros curl corrigidos'
 while ($true) {
- try {
-  $jobs = @(Invoke-RestMethod -Uri "$base/jobs" -Method Get -Headers $headers -TimeoutSec 5)
-  foreach ($job in $jobs) {
-   if ($allowed -notcontains $job.region) { continue }
-   if ($job.action -notin @('STOP_PRIMARY','START_PRIMARY')) { continue }
-   $service = $job.region + '-primary'
-   Write-Host "Intervencao: $($job.action), $service"
-   $ok=$false; $result=''
-   try {
-    if ($job.action -eq 'STOP_PRIMARY') {
-      # 30 s para o servidor terminar pedidos em curso antes de o processo parar.
-      & docker compose stop -t 30 $service 2>&1 | Out-String | ForEach-Object { $result = $_ }
-    } else {
-      & docker compose up -d --no-build $service 2>&1 | Out-String | ForEach-Object { $result = $_ }
+  try {
+    $getParams = @('-k','-sS','--fail','--max-time','8','-H',("X-Agent-Key: " + $key),($base + '/jobs'))
+    $raw = Invoke-CurlNandBank -CurlArguments $getParams
+    $parsed = ConvertFrom-Json -InputObject $raw
+    $jobs = @($parsed)
+    foreach ($job in $jobs) {
+      if ($null -eq $job -or $regions -notcontains $job.region -or $job.action -notin @('STOP_PRIMARY','START_PRIMARY')) { continue }
+      $service = [string]$job.region + '-primary'
+      $desired = if ($job.action -eq 'STOP_PRIMARY') { 'exited' } else { 'running' }
+      $ok = $false
+      $result = ''
+      try {
+        $state = ContainerState $service
+        Log "job=$($job.id) action=$($job.action) actual=$state esperado=$desired"
+        if ($state -eq $desired) {
+          $ok = $true
+          $result = "Estado ja confirmado via docker inspect: $service=$state. Sem repetir a operacao."
+        } else {
+          # Docker Compose pode escrever mensagens normais no stderr. Em
+          # Windows PowerShell 5.1 isso pode gerar excecao com Stop.
+          # A confirmacao depende do estado REAL e nao do texto da consola.
+          $previousPreference = $ErrorActionPreference
+          $ErrorActionPreference = 'Continue'
+          try {
+            if ($job.action -eq 'STOP_PRIMARY') {
+              $output = & docker compose stop -t 30 $service 2>&1
+            } else {
+              $output = & docker compose up -d --no-build $service 2>&1
+            }
+            $exit = $LASTEXITCODE
+          } finally {
+            $ErrorActionPreference = $previousPreference
+          }
+          $stateAfter = ContainerState $service
+          $ok = ($stateAfter -eq $desired)
+          $result = "Docker exit=$exit; estado=$stateAfter; saida=$(($output | Out-String).Trim())"
+          if ($exit -ne 0 -and $ok) { Log "Docker reportou erro mas $service atingiu estado=$desired" }
+        }
+      } catch {
+        $result = 'Falha Docker: ' + $_.Exception.Message
+        Log $result
+      }
+      $body = @{ok=[bool]$ok; result=([string]$result).Substring(0,[Math]::Min(480,([string]$result).Length))} | ConvertTo-Json -Compress
+      $jsonPath = Join-Path $env:TEMP ('nandbank-' + [guid]::NewGuid().ToString('N') + '.json')
+      try {
+        [System.IO.File]::WriteAllText($jsonPath,$body,(New-Object System.Text.UTF8Encoding($false)))
+        $postParams = @('-k','-sS','--fail','--max-time','10','-X','POST','-H',('X-Agent-Key: ' + $key),'-H','Content-Type: application/json','--data-binary',('@' + $jsonPath),($base + '/jobs/' + $job.id + '/result'))
+        $confirmed = $false
+        for ($n=1; $n -le 3; $n++) {
+          try {
+            $reply = Invoke-CurlNandBank -CurlArguments $postParams
+            Log "CONFIRMADO job=$($job.id) ok=$ok resposta=$reply"
+            $confirmed = $true
+            break
+          } catch {
+            Log "ERRO POST tentativa=$n job=$($job.id): $($_.Exception.Message)"
+            Start-Sleep -Seconds 2
+          }
+        }
+        if (-not $confirmed) { Log "FALHA FINAL job=$($job.id): permanece pendente" }
+      } finally {
+        Remove-Item -LiteralPath $jsonPath -Force -ErrorAction SilentlyContinue
+      }
     }
-    $ok = ($LASTEXITCODE -eq 0)
-   } catch { $result = $_.Exception.Message }
-   $body = @{ok=$ok; result=($result.ToString().Substring(0,[Math]::Min(480, $result.ToString().Length)))} | ConvertTo-Json -Compress
-   Invoke-RestMethod -Uri "$base/jobs/$($job.id)/result" -Method Post -Headers $headers -ContentType 'application/json' -Body $body -TimeoutSec 7 | Out-Null
-   if ($ok) { Write-Host 'Accao aplicada.' } else { Write-Host 'ERRO no comando Docker.' }
+  } catch {
+    Log "ERRO CONSULTA: $($_.Exception.Message)"
   }
- } catch { Start-Sleep -Seconds 4 }
- Start-Sleep -Seconds 3
+  Start-Sleep -Seconds 3
 }

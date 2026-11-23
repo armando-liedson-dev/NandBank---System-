@@ -1,0 +1,124 @@
+# NandBank fases 4 e 5 - extensao isolada, sem modificar os servicos bancarios.
+services:
+  dfs-master:
+    image: chrislusf/seaweedfs:latest
+    command: 'master -ip=dfs-master -port=9333 -mdir=/data -defaultReplication=001'
+    restart: unless-stopped
+    volumes:
+      - nb_dfs_master:/data
+    networks: [dfsnet]
+
+  dfs-volume-af:
+    image: chrislusf/seaweedfs:latest
+    command: 'volume -ip=dfs-volume-af -port=8080 -dir=/data -master=dfs-master:9333 -max=10 -dataCenter=dc1 -rack=rack1'
+    restart: unless-stopped
+    volumes:
+      - nb_dfs_volume_af:/data
+    networks: [dfsnet]
+
+  dfs-volume-eu:
+    image: chrislusf/seaweedfs:latest
+    command: 'volume -ip=dfs-volume-eu -port=8080 -dir=/data -master=dfs-master:9333 -max=10 -dataCenter=dc1 -rack=rack1'
+    restart: unless-stopped
+    volumes:
+      - nb_dfs_volume_eu:/data
+    networks: [dfsnet]
+
+  dfs-filer:
+    image: chrislusf/seaweedfs:latest
+    command: 'filer -ip=dfs-filer -port=8888 -master=dfs-master:9333 -defaultStoreDir=/data -defaultReplicaPlacement=001'
+    restart: unless-stopped
+    volumes:
+      - nb_dfs_filer:/data
+    networks: [dfsnet]
+
+  dfs-node-af:
+    image: python:3.12-alpine
+    command: ['python', '-u', '/opt/fases45/dfs_node.py', 'server']
+    environment:
+      NODE_REGION: af
+      DFS_FILER: http://dfs-filer:8888
+    env_file: ./fases45/.env
+    volumes: ['./fases45/dfs_node.py:/opt/fases45/dfs_node.py:ro']
+    restart: unless-stopped
+    networks: [dfsnet]
+
+  dfs-node-eu:
+    image: python:3.12-alpine
+    command: ['python', '-u', '/opt/fases45/dfs_node.py', 'server']
+    environment:
+      NODE_REGION: eu
+      DFS_FILER: http://dfs-filer:8888
+    env_file: ./fases45/.env
+    volumes: ['./fases45/dfs_node.py:/opt/fases45/dfs_node.py:ro']
+    restart: unless-stopped
+    networks: [dfsnet]
+
+  dfs-node-as:
+    image: python:3.12-alpine
+    command: ['python', '-u', '/opt/fases45/dfs_node.py', 'server']
+    environment:
+      NODE_REGION: as
+      DFS_FILER: http://dfs-filer:8888
+    env_file: ./fases45/.env
+    volumes: ['./fases45/dfs_node.py:/opt/fases45/dfs_node.py:ro']
+    restart: unless-stopped
+    networks: [dfsnet]
+
+  dfs-node-na:
+    image: python:3.12-alpine
+    command: ['python', '-u', '/opt/fases45/dfs_node.py', 'server']
+    environment:
+      NODE_REGION: na
+      DFS_FILER: http://dfs-filer:8888
+    env_file: ./fases45/.env
+    volumes: ['./fases45/dfs_node.py:/opt/fases45/dfs_node.py:ro']
+    restart: unless-stopped
+    networks: [dfsnet]
+
+  dfs-node-sa:
+    image: python:3.12-alpine
+    command: ['python', '-u', '/opt/fases45/dfs_node.py', 'server']
+    environment:
+      NODE_REGION: sa
+      DFS_FILER: http://dfs-filer:8888
+    env_file: ./fases45/.env
+    volumes: ['./fases45/dfs_node.py:/opt/fases45/dfs_node.py:ro']
+    restart: unless-stopped
+    networks: [dfsnet]
+
+  dfs-node-oc:
+    image: python:3.12-alpine
+    command: ['python', '-u', '/opt/fases45/dfs_node.py', 'server']
+    environment:
+      NODE_REGION: oc
+      DFS_FILER: http://dfs-filer:8888
+    env_file: ./fases45/.env
+    volumes: ['./fases45/dfs_node.py:/opt/fases45/dfs_node.py:ro']
+    restart: unless-stopped
+    networks: [dfsnet]
+
+  dfs-audit-exporter:
+    image: globalscale-bank:1.0
+    command: ['python', '-u', '/opt/fases45/audit_exporter.py']
+    environment:
+      PG_PASSWORD: ${PG_PASSWORD:?Falta PG_PASSWORD}
+      POSTGRES_USER: globalscale
+      POSTGRES_DB: globalscale
+      DB_HOST: db-global
+      DFS_FILER: http://dfs-filer:8888
+    volumes:
+      - ./fases45/audit_exporter.py:/opt/fases45/audit_exporter.py:ro
+      - certs:/certs:ro
+    restart: unless-stopped
+    networks: [mesh, dfsnet]
+
+volumes:
+  nb_dfs_master: {}
+  nb_dfs_volume_af: {}
+  nb_dfs_volume_eu: {}
+  nb_dfs_filer: {}
+
+networks:
+  dfsnet:
+    internal: true

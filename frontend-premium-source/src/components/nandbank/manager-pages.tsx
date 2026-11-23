@@ -130,7 +130,7 @@ export function ManagerOverviewPage({ global = false }: { global?: boolean }) {
   const title = global ? "Visão global da rede" : `Operação ${profile.data?.user.region ? `da região ${regionLabel(profile.data.user.region)}` : "regional"}`;
 
   return (
-    <DashboardShell mode="manager" title={global ? "Visão global" : "Visão geral"} eyebrow={global ? "Gerência global" : "Gerência regional"}>
+    <DashboardShell mode={global ? "global" : "manager"} title={global ? "Visão global" : "Visão geral"} eyebrow={global ? "Gerência global" : "Gerência regional"}>
       <div className="page-stack manager-stack">
         <ManagerIntro title={title} description={global ? "Indicadores e estado de regiões devolvidos pelo Gateway, sem estimativas." : "Acompanhe serviços, operações e nós dentro do âmbito autorizado pelo Gateway."} action={<Button variant="secondary" onClick={() => { void profile.refetch(); void stats.refetch(); void nodes.refetch(); }}><RefreshCw aria-hidden="true" /> Actualizar</Button>} />
         <ManagerAccess role={role} globalOnly={global} />
@@ -193,7 +193,7 @@ export function ManagerInfrastructurePage() {
   const scopedNodes = role === "global_manager" ? nodes.data : nodes.data?.filter((node) => node.code === profile.data?.user.region || node.region === profile.data?.user.region);
 
   return (
-    <DashboardShell mode="manager" title="Infraestrutura" eyebrow="Gestão de nós">
+    <DashboardShell mode={profile.data?.user.role === "global_manager" ? "global" : "manager"} title="Infraestrutura" eyebrow="Gestão de nós">
       <div className="page-stack manager-stack">
         <ManagerIntro title="Infraestrutura distribuída." description="O estado e os pedidos de intervenção são os que o Gateway devolve. A execução depende do agente Windows no servidor." action={<Button variant="secondary" onClick={() => { void nodes.refetch(); void actions.refetch(); }}><RefreshCw aria-hidden="true" /> Actualizar</Button>} />
         <ManagerAccess role={role} />
@@ -204,7 +204,7 @@ export function ManagerInfrastructurePage() {
           <section className="manager-section">
             <div className="section-title-row manager-section-title"><div><p className="eyebrow eyebrow-gold">Intervenções</p><h3>Pedidos registados</h3></div></div>
             <ManagerNotice loading={actions.isPending} error={actions.error} retry={actions.refetch} />
-            {actions.data?.jobs.length ? <div className="job-list">{actions.data.jobs.map((job) => <article className="job-row" key={job.id}><span className="job-icon"><Activity aria-hidden="true" /></span><div className="min-w-0"><strong>{job.action} · {regionLabel(job.region)}</strong><span>{job.reason} · {job.status}</span><small>{job.result ?? "A aguardar resultado do agente."}</small></div><time>{formatDate(job.updated_at ?? job.created_at)}</time></article>)}</div> : !actions.isPending && !actions.isError ? <div className="manager-empty"><CircleHelp aria-hidden="true" /><p>O Gateway não devolveu pedidos de intervenção.</p></div> : null}
+            {actions.data?.jobs.length ? <div className="job-list">{actions.data.jobs.map((job) => <article className="job-row" key={job.id}><span className="job-icon"><Activity aria-hidden="true" /></span><div className="min-w-0"><strong>{job.action} · {regionLabel(job.region)}</strong><span>{job.reason} · {job.status}</span><small>{job.result ?? "A aguardar resultado do agente."}</small>{job.action === "START_PRIMARY" && job.status === "FAILED" && nodes.data?.some((node) => (node.code ?? node.region) === job.region && (node.primary_up === true || node.primary_status === "UP")) && <small>Este erro pertence a uma tentativa anterior. O principal está actualmente disponível.</small>}</div><time>{formatDate(job.updated_at ?? job.created_at)}</time></article>)}</div> : !actions.isPending && !actions.isError ? <div className="manager-empty"><CircleHelp aria-hidden="true" /><p>O Gateway não devolveu pedidos de intervenção.</p></div> : null}
           </section>
           {canControl && <section className="manager-action-section"><div><p className="eyebrow eyebrow-gold">Acções controladas</p><h3>Gestão do nó principal</h3><p>Cada pedido exige confirmação, motivo e validação do servidor.</p></div><div className="node-action-buttons">{scopedNodes?.map((node, index) => { const code = node.code ?? node.region; if (!code) return null; return <div className="node-action-row" key={code}><strong>{regionNodeTitle(node)}</strong><div><Button variant="secondary" disabled={DEMO_MODE || requestAction.isPending} onClick={() => { setChoice({ code, action: "STOP_PRIMARY", label: "Desligar nó principal" }); setReason("MAINTENANCE"); }}>Desligar principal</Button><Button disabled={DEMO_MODE || requestAction.isPending} onClick={() => { setChoice({ code, action: "START_PRIMARY", label: "Ligar nó principal" }); setReason("MAINTENANCE"); }}>Ligar principal</Button></div></div>; })}</div>{DEMO_MODE && <p className="field-note">Na demonstração, as acções que alteram nós estão desactivadas.</p>}{message && <p role={requestAction.isError ? "alert" : "status"} className={requestAction.isError ? "form-message form-message-error" : "form-message form-message-success"}>{message}</p>}</section>}
         </>}
@@ -247,7 +247,7 @@ export function ManagerOperationsPage() {
   const canReview = hasManagerRole(role);
 
   return (
-    <DashboardShell mode="manager" title="Operações" eyebrow="Gestão regional">
+    <DashboardShell mode={profile.data?.user.role === "global_manager" ? "global" : "manager"} title="Operações" eyebrow="Gestão regional">
       <div className="page-stack manager-stack">
         <ManagerIntro title="Operações e pedidos." description="Consulte registos e pedidos de cartão dentro do âmbito que o Gateway autoriza." action={<Button variant="secondary" onClick={() => { void operations.refetch(); void cards.refetch(); }}><RefreshCw aria-hidden="true" /> Actualizar</Button>} />
         <ManagerAccess role={role} />
@@ -268,7 +268,7 @@ export function GlobalAuditPage() {
   const role = profile.data?.user.role;
 
   return (
-    <DashboardShell mode="manager" title="Auditoria global" eyebrow="Controlo e auditoria">
+    <DashboardShell mode="global" title="Auditoria global" eyebrow="Controlo e auditoria">
       <div className="page-stack manager-stack">
         <ManagerIntro title="Diário de auditoria." description="Eventos registados pelo Gateway, disponíveis apenas ao gerente global." action={<Button variant="secondary" onClick={() => void audit.refetch()}><RefreshCw aria-hidden="true" /> Actualizar</Button>} />
         <ManagerAccess role={role} globalOnly />

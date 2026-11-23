@@ -37,7 +37,17 @@ def verify_token(raw):
 def bearer(authorization:str|None=Header(None)):
     if not authorization or not authorization.startswith('Bearer '):
         raise HTTPException(status_code=401,detail='Autenticação necessária')
-    return verify_token(authorization[7:])
+    claims=verify_token(authorization[7:])
+    # O Gateway verifica o estado em todas as chamadas: suspensão invalida JWT existentes.
+    from .db import connect
+    with connect() as c:
+        row=c.execute('SELECT role,region,branch,status FROM users WHERE id=%s',(claims['sub'],)).fetchone()
+    if not row:raise HTTPException(status_code=401,detail='Conta não encontrada')
+    state=row.get('status','ACTIVE')
+    if state!='ACTIVE':
+        raise HTTPException(status_code=403,detail={'EXPIRED':'Conta expirada!','SUSPENDED':'Conta suspensa!','SUSPECT':'Conta suspeita!'}.get(state,'Conta indisponível!'))
+    claims.update(role=row['role'],region=row['region'],branch=row['branch'])
+    return claims
 
 def permitted(claims, *roles,region=None,branch=None):
     role=claims.get('role')

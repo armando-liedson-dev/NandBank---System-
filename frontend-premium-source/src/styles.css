@@ -738,3 +738,70 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .node-health { transition:background-color 240ms ease, color 240ms ease, border-color 240ms ease; }
 .node-pair strong { transition:background-color 240ms ease, color 240ms ease; }
 @media (prefers-reduced-motion:reduce) { .node-health,.node-pair strong { transition-duration:0.01ms!important; } }
+
+/* NandBank - interfaces de balcão, filial e clientes (responsivas) */
+.staff-panel { border:1px solid color-mix(in srgb, currentColor 15%, transparent); background:color-mix(in srgb, #ffffff 5%, #181b1a); border-radius:14px; padding:clamp(16px,3vw,26px); display:grid;gap:18px; min-width:0; }
+.staff-panel-heading {display:flex; flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:14px;}
+.staff-panel h3,.staff-subtitle {font-size:1.1rem;font-weight:800;color:inherit;}
+.staff-panel-heading>span,.staff-note {font-size:.82rem;color:#adafaf;line-height:1.6;}
+.staff-field {display:flex;flex-direction:column;gap:7px;min-width:0;font-size:.84rem;font-weight:650;}
+.staff-field input {min-height:44px;color:var(--foreground);}
+.staff-native-select {width:100%;min-height:45px; padding:0 12px;color:var(--foreground); background:var(--background);border:1px solid rgba(150,150,150,.45);border-radius:9px; font:inherit;}
+.staff-native-select option {color:#101414;background:#fff;}
+.staff-search {position:relative;}.staff-search>svg {position:absolute;left:11px;top:12px;width:17px;height:17px;color:#999;}.staff-search input{padding-left:38px;}
+.staff-form,.staff-filters {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:end;}
+.staff-full {grid-column:1/-1;}.staff-submit {min-height:45px;}
+.staff-tabs {display:flex;gap:10px;}.staff-tabs button {border:1px solid #a88c52;padding:10px 18px;border-radius:8px;font-weight:700;color:inherit;}.staff-tabs button.active{background:#b28d4e;color:#141713;}
+.staff-alert,.staff-success {border-radius:10px;padding:12px 14px;overflow-wrap:anywhere;line-height:1.65;}
+.staff-alert{border:1px solid #b85f60;color:#eaa3a4;background:rgba(150,45,45,.08);}
+.staff-success{border:1px solid #368565;color:#98dcb7;background:rgba(16,115,60,.09);}
+.staff-account-info {font-size:.86rem;color:#d0b27e;overflow-wrap:anywhere;}
+.staff-stats {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;}
+.staff-stat {display:flex; flex-direction:column;gap:10px; border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:20px;background:rgba(255,255,255,.035);}
+.staff-stat svg {color:#c7a35f;width:22px;}.staff-stat strong{font-size:1.35rem;overflow-wrap:anywhere}.staff-stat span{color:#aeb3b0;font-size:.77rem;}
+.staff-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}.staff-action{border:1px solid rgba(255,255,255,.15);border-radius:13px;padding:22px;display:flex;flex-direction:column;gap:12px;color:inherit;text-decoration:none;}.staff-action>svg{color:#c4a164}.staff-action strong{font-size:1rem}.staff-action span{font-size:.85rem;color:#abb0ad;}
+.staff-list{display:flex;flex-direction:column;min-width:0;}.staff-list article{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;border-bottom:1px solid rgba(150,150,150,.2);padding:12px 0;overflow-wrap:anywhere;}.staff-list article>div{display:flex;flex-direction:column;gap:6px;min-width:0}.staff-list strong,.staff-list span{font-size:.85rem}.staff-list small{color:#a4aaa6; font-size:.75rem;overflow-wrap:anywhere;}
+.staff-customers-list {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.staff-customer{display:flex;justify-content:space-between;text-align:left;gap:10px; border:1px solid rgba(180,180,180,.2);border-radius:10px;padding:14px;color:inherit;min-width:0;}
+.staff-customer.active{border-color:#d2aa61;background:rgba(208,162,83,.09);}
+.staff-customer>span:first-child{display:flex;flex-direction:column;gap:5px;min-width:0;overflow-wrap:anywhere}.staff-customer strong{font-weight:800;}.staff-customer small{color:#aeb3b0;font-size:.75rem;}
+.staff-status{height:max-content;border-radius:9px;padding:6px;color:#efc7a2;font-size:.7rem;border:1px solid #b28d4e;white-space:nowrap;}
+.staff-status.active{color:#9dddba;border-color:#38805c}.staff-separator{border-top:1px solid rgba(150,150,150,.24);margin:10px 0;}.staff-small-heading{font-size:.94rem;font-weight:800;margin-top:15px;}
+@media(max-width:800px){.staff-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.staff-customers-list{grid-template-columns:1fr}}
+@media(max-width:540px){.staff-form,.staff-filters,.staff-actions{grid-template-columns:1fr}.staff-customer{flex-wrap:wrap}.staff-panel{padding:15px}.staff-stats{gap:8px}.staff-stat{padding:12px}.staff-stat strong{font-size:1.1rem}}
+
+/* Correccao NandBank: inputs sempre legiveis no tema escuro; foco acessivel. */
+.app-frame-dark .staff-field input,
+.app-frame-dark .staff-field textarea,
+.app-frame-dark .staff-field select,
+.app-frame-dark .staff-native-select,
+.app-frame-dark .staff-search input {
+  background-color: #222725 !important;
+  color: #f7f4ed !important;
+  -webkit-text-fill-color: #f7f4ed;
+  border-color: #6c746e !important;
+  caret-color: #f7f4ed;
+  color-scheme: dark;
+}
+.app-frame-dark .staff-field input::placeholder,
+.app-frame-dark .staff-field textarea::placeholder,
+.app-frame-dark .staff-search input::placeholder { color: #b7c0ba !important; opacity: 1; -webkit-text-fill-color: #b7c0ba; }
+.app-frame-dark .staff-field input:focus-visible,
+.app-frame-dark .staff-native-select:focus-visible {
+  outline: 2px solid #d6af69;
+  outline-offset: 2px;
+}
+.app-frame-dark .staff-native-select option { background:#222725;color:#fff; }
+.auth-form-panel { color: #161a18; }
+.auth-form-panel a[aria-label="NandBank — página inicial"] span { color: #161a18 !important; }
+.brand-mark-black { filter: brightness(0) !important; }
+.auth-form-panel .form-field input { color: #161a18 !important; -webkit-text-fill-color:#161a18; background: #fffdfa !important; border-color:#948d83; caret-color:#161a18; }
+.auth-form-panel .form-field input::placeholder { color: #615e58; -webkit-text-fill-color:#615e58; }
+.staff-delete-section { border: 1px solid #b85f60; padding: 16px; border-radius: 10px; display:grid; gap: 12px; }
+.staff-delete-section .staff-note { color: #f0c0b9; }
+.staff-delete-section .staff-delete-button { background:#913d3b;color:#fff; min-height:44px; }
+.staff-delete-section .staff-delete-button:disabled { opacity:.5;cursor:not-allowed; }
+
+/* Formularios nos paineis de gerencia (exceto dialogos claros) */
+.app-frame-dark .manager-action-section .form-field input { background:#222725 !important; color:#f7f4ed !important; -webkit-text-fill-color:#f7f4ed; caret-color:#f7f4ed; border-color:#6c746e !important; }
+.app-frame-dark .manager-action-section .form-field input::placeholder { color:#b7c0ba !important; -webkit-text-fill-color:#b7c0ba; }

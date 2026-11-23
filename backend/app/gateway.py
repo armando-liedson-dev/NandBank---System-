@@ -170,6 +170,12 @@ def _ensure_nandbank_schema():
           CHECK(status IN ('REQUESTED','ACTIVE','FROZEN','REJECTED','CANCELLED')),
           created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now(),
           reviewed_by text, reviewed_at timestamptz)""")
+        # A suspensão é lógica: nunca apagar contas nem o diário de movimentos.
+        c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'ACTIVE'")
+        c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS status_reason text NOT NULL DEFAULT ''")
+        c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS status_changed_at timestamptz")
+        c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS status_changed_by text")
+        c.execute("CREATE INDEX IF NOT EXISTS ix_users_role_region ON users(role,region,branch)")
         c.execute("CREATE INDEX IF NOT EXISTS ix_cards_user ON virtual_cards(user_id)")
         c.execute("""CREATE TABLE IF NOT EXISTS node_control_jobs (
           id text PRIMARY KEY, region text NOT NULL, action text NOT NULL
@@ -217,7 +223,7 @@ def audit(actor,kind,details):
 
 def lookup_account(account_id):
     with connect() as c:
-        a=c.execute('SELECT id,user_id,region,branch,currency FROM account_registry WHERE id=%s',(account_id,)).fetchone()
+        a=c.execute('SELECT a.id,a.user_id,a.region,a.branch,a.currency,u.status AS owner_status FROM account_registry a JOIN users u ON u.id=a.user_id WHERE a.id=%s',(account_id,)).fetchone()
     if not a:raise HTTPException(404,'Conta não encontrada')
     return a
 
@@ -305,6 +311,15 @@ class AdditionalAccount(BaseModel):
 
 class Login(BaseModel):
     email:str;password:str
+
+class CustomerStatusChange(BaseModel):
+    status:str
+    reason:str=Field(min_length=5,max_length=300)
+
+class CustomerUpdate(BaseModel):
+    name:str=Field(min_length=3,max_length=120)
+    email:str=Field(min_length=5,max_length=180)
+
 
 class Transfer(BaseModel):
     source_id:str;destination_id:str
@@ -541,6 +556,8 @@ def additional_account(v:AdditionalAccount,user=Depends(bearer)):
 def login(v:Login):
     with connect() as c:u=c.execute('SELECT * FROM users WHERE email=%s',(v.email.strip().lower(),)).fetchone()
     if not u or not password_verify(v.password,u['password_hash']):raise HTTPException(401,'Email ou palavra-passe inválidos')
+    if u.get('status','ACTIVE')!='ACTIVE':
+        raise HTTPException(403,{'EXPIRED':'Conta expirada!','SUSPENDED':'Conta suspensa!','SUSPECT':'Conta suspeita!'}.get(u['status'],'Conta indisponível!'))
     return {'access_token':issue_token(u['id'],u['role'],u['region'],u['branch']),'token_type':'bearer','role':u['role'],'name':u['name']}
 
 @app.get('/api/me')
@@ -643,6 +660,8 @@ def transfer(v:Transfer,user=Depends(bearer)):
                 assert_region_writable(a['region'])
                 assert_region_writable(b['region'])
         else:
+            if a.get('owner_status','ACTIVE')!='ACTIVE' or b.get('owner_status','ACTIVE')!='ACTIVE':
+                raise HTTPException(403,'Origem ou destino com conta suspensa, suspeita ou expirada')
             assert_region_writable(a['region'])
             assert_region_writable(b['region'])
             tx_id=str(uuid.uuid4())
@@ -694,6 +713,8 @@ def teller_execute(v,user,operation):
         if old and (old['account_id']!=v.account_id or old['amount_minor']!=amount or old['deposit_currency']!=v.currency or old['operation_type']!=operation):
             raise HTTPException(409,'Identificador de operação reutilizado com dados diferentes')
         if not old:
+            if a.get('owner_status','ACTIVE')!='ACTIVE':
+                raise HTTPException(403,'Conta suspensa, suspeita ou expirada: operações de balcão bloqueadas')
             c.execute('''INSERT INTO operation_registry(id,actor_id,account_id,operation_type,amount_minor,deposit_currency,credited_minor,account_currency,rate_text,status)
               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'PENDING')''',
               (v.idempotency_key,user['sub'],a['id'],operation,amount,v.currency,quote['credit_minor'],a['currency'],quote['rate']))
@@ -756,6 +777,120 @@ def admin_accounts(user=Depends(bearer)):
         if user['role']=='regional_manager':
             return c.execute('''SELECT a.*,u.name,u.email FROM account_registry a JOIN users u ON u.id=a.user_id WHERE a.region=%s ORDER BY a.created_at DESC LIMIT 300''',(user['region'],)).fetchall()
         return c.execute('''SELECT a.*,u.name,u.email FROM account_registry a JOIN users u ON u.id=a.user_id WHERE a.branch=%s ORDER BY a.created_at DESC LIMIT 300''',(user['branch'],)).fetchall()
+
+# Gestão responsável dos clientes. Nunca apagar clientes com histórico financeiro.
+CUSTOMER_STATES={'ACTIVE','SUSPENDED','SUSPECT','EXPIRED'}
+
+def _customer_scope(user, customer_id, require_exclusive=False):
+    permitted(user,'regional_manager','branch_manager')
+    with connect() as c:
+        target=c.execute("SELECT id,name,email,role,region,branch,status,status_reason,status_changed_at,created_at FROM users WHERE id=%s AND role='client'",(customer_id,)).fetchone()
+        if not target:raise HTTPException(404,'Cliente não encontrado')
+        accounts=c.execute('SELECT id,region,branch,currency,created_at FROM account_registry WHERE user_id=%s ORDER BY created_at',(customer_id,)).fetchall()
+    if user['role']=='global_manager':return target,accounts
+    scoped=[a for a in accounts if (a['region']==user.get('region') if user['role']=='regional_manager' else a['branch']==user.get('branch'))]
+    if not scoped:raise HTTPException(403,'Cliente fora do seu âmbito')
+    if require_exclusive and len(scoped)!=len(accounts):
+        raise HTTPException(403,'O cliente possui contas fora do seu âmbito; intervenção reservada ao gerente global')
+    return target,scoped
+
+@app.get('/api/admin/customers')
+def list_customers(user=Depends(bearer)):
+    permitted(user,'regional_manager','branch_manager')
+    with connect() as c:
+        if user['role']=='global_manager':
+            rows=c.execute("SELECT u.id,u.name,u.email,COALESCE(MIN(a.region),u.region) AS region,COALESCE(MIN(a.branch),u.branch) AS branch,ARRAY_AGG(DISTINCT a.region) FILTER (WHERE a.region IS NOT NULL) AS regions,u.status,u.status_reason,u.status_changed_at,u.created_at,count(a.id) AS account_count FROM users u LEFT JOIN account_registry a ON a.user_id=u.id WHERE u.role='client' GROUP BY u.id ORDER BY MIN(a.region) NULLS LAST,u.created_at DESC LIMIT 500").fetchall()
+        else:
+            field='a.region' if user['role']=='regional_manager' else 'a.branch'
+            scope=user['region'] if user['role']=='regional_manager' else user['branch']
+            rows=c.execute(f"SELECT u.id,u.name,u.email,MIN(a.region) AS region,MIN(a.branch) AS branch,ARRAY_AGG(DISTINCT a.region) AS regions,u.status,u.status_reason,u.status_changed_at,u.created_at,count(DISTINCT a.id) AS account_count FROM users u JOIN account_registry a ON a.user_id=u.id WHERE u.role='client' AND {field}=%s GROUP BY u.id ORDER BY u.created_at DESC LIMIT 500",(scope,)).fetchall()
+    return rows
+
+@app.get('/api/admin/customers/{customer_id}/activity')
+def customer_activity(customer_id:str,user=Depends(bearer)):
+    target,accounts=_customer_scope(user,customer_id)
+    ids=[a['id'] for a in accounts]
+    if not ids:return {'customer':target,'accounts':[],'operations':[],'transfers':[],'cards':[]}
+    with connect() as c:
+        operations=c.execute('SELECT o.* FROM operation_registry o WHERE o.account_id = ANY(%s) ORDER BY o.created_at DESC LIMIT 100',(ids,)).fetchall()
+        transfers=c.execute('SELECT t.* FROM transfers t WHERE t.source_id = ANY(%s) OR t.destination_id = ANY(%s) ORDER BY t.created_at DESC LIMIT 100',(ids,ids)).fetchall()
+        cards=c.execute('SELECT id,account_id,region,last4,status,created_at,updated_at FROM virtual_cards WHERE account_id = ANY(%s) ORDER BY created_at DESC LIMIT 100',(ids,)).fetchall()
+    return {'customer':target,'accounts':accounts,'operations':operations,'transfers':transfers,'cards':cards}
+
+@app.patch('/api/admin/customers/{customer_id}')
+def update_customer(customer_id:str,v:CustomerUpdate,user=Depends(bearer)):
+    target,_=_customer_scope(user,customer_id,require_exclusive=True)
+    name=v.name.strip();email=v.email.strip().lower()
+    if len(name)<3 or '@' not in email or '.' not in email.split('@')[-1]:
+        raise HTTPException(400,'Nome ou email inválido')
+    from psycopg.errors import UniqueViolation
+    try:
+        with connect(autocommit=False) as c:
+            c.execute("UPDATE users SET name=%s,email=%s WHERE id=%s AND role='client'",(name,email,customer_id))
+    except UniqueViolation:
+        raise HTTPException(409,'Este email já pertence a outra conta')
+    audit(user['sub'],'CUSTOMER_UPDATED',{'customer_id':customer_id,'old_name':target['name'],'new_name':name,'old_email':target['email'],'new_email':email})
+    return {'ok':True,'customer_id':customer_id,'name':name,'email':email}
+
+@app.patch('/api/admin/customers/{customer_id}/status')
+def change_customer_status(customer_id:str,v:CustomerStatusChange,user=Depends(bearer)):
+    target,_=_customer_scope(user,customer_id,require_exclusive=True)
+    status=v.status.strip().upper();reason=v.reason.strip()
+    if status not in CUSTOMER_STATES:raise HTTPException(400,'Estado de cliente inválido')
+    if len(reason)<5:raise HTTPException(400,'Justificação obrigatória com pelo menos 5 caracteres')
+    with connect(autocommit=False) as c:
+        c.execute("UPDATE users SET status=%s,status_reason=%s,status_changed_at=now(),status_changed_by=%s WHERE id=%s AND role='client'",(status,reason,user['sub'],customer_id))
+    audit(user['sub'],'CUSTOMER_STATUS_CHANGED',{'customer_id':customer_id,'before':target['status'],'after':status,'reason':reason})
+    return {'ok':True,'customer_id':customer_id,'status':status,'message':'Estado actualizado. O histórico financeiro foi preservado.'}
+
+class CustomerPermanentDelete(BaseModel):
+    confirmation_email:str=Field(min_length=5,max_length=180)
+
+@app.post('/api/admin/customers/{customer_id}/permanent-delete')
+def delete_empty_customer(customer_id:str,v:CustomerPermanentDelete,user=Depends(bearer)):
+    # Remocao fisica restrita ao gerente global e a contas SEM historico.
+    # Clientes com depositos, transferencias ou saldo so podem ser arquivados.
+    if user['role'] not in ('global_manager','regional_manager'):
+        raise HTTPException(403,'Eliminacao definitiva exige gerente regional ou global')
+    target,accounts=_customer_scope(user,customer_id,require_exclusive=True)
+    if v.confirmation_email.strip().casefold()!=target['email'].casefold():
+        raise HTTPException(400,'Escreva o email exacto para confirmar a eliminacao')
+    if len(accounts)!=1:
+        raise HTTPException(409,'Eliminacao definitiva limitada a clientes com uma unica conta sem historico')
+    a=accounts[0]
+    with connect() as c:
+        if c.execute('SELECT 1 FROM operation_registry WHERE account_id=%s LIMIT 1',(a['id'],)).fetchone():
+            raise HTTPException(409,'Ha operacoes de balcao: utilize Conta expirada')
+        if c.execute('SELECT 1 FROM transfers WHERE source_id=%s OR destination_id=%s OR actor_id=%s LIMIT 1',
+                     (a['id'],a['id'],customer_id)).fetchone():
+            raise HTTPException(409,'Ha transferencias: utilize Conta expirada')
+        if c.execute('SELECT 1 FROM virtual_cards WHERE user_id=%s OR account_id=%s LIMIT 1',
+                     (customer_id,a['id'])).fetchone():
+            raise HTTPException(409,'Ha cartoes: utilize Conta expirada')
+    assert_region_writable(a['region'])
+    # O participante faz lock, verifica saldo=0 e ausencia de ledger antes de apagar.
+    # A chamada e idempotente para permitir repeticao se a resposta se perder.
+    call(a['region'],'/internal/accounts/'+a['id']+'/purge-empty-test',{})
+    try:
+        with connect(autocommit=False) as c:
+            # Revalidar as ligacoes globais na transaccao.
+            c.execute('SELECT id FROM account_registry WHERE id=%s AND user_id=%s FOR UPDATE',(a['id'],customer_id))
+            if c.execute('SELECT 1 FROM operation_registry WHERE account_id=%s LIMIT 1',(a['id'],)).fetchone() or \
+               c.execute('SELECT 1 FROM transfers WHERE source_id=%s OR destination_id=%s LIMIT 1',(a['id'],a['id'])).fetchone():
+                raise HTTPException(409,'Foi detectada uma operacao concorrente. Recuperacao necessaria.')
+            c.execute('DELETE FROM account_registry WHERE id=%s AND user_id=%s',(a['id'],customer_id))
+            c.execute("DELETE FROM users WHERE id=%s AND role='client'",(customer_id,))
+    except Exception:
+        # Compensacao: se a transaccao global falhar, reconstituir a conta regional vazia.
+        try:
+            call(a['region'],'/internal/accounts',{
+                'id':a['id'],'owner_id':customer_id,'branch':a['branch'],'currency':a['currency']})
+        except Exception:
+            logger.exception('ERRO COMPENSACAO cliente %s conta %s',customer_id,a['id'])
+        raise
+    audit(user['sub'],'EMPTY_CUSTOMER_PERMANENTLY_DELETED',{
+        'customer_id':customer_id,'account_id':a['id'],'email':target['email']})
+    return {'ok':True,'deleted':True,'customer_id':customer_id}
 
 @app.post('/api/admin/accounts/normalize-currencies')
 def normalize_account_currencies(user=Depends(bearer)):

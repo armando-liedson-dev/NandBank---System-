@@ -1,7 +1,7 @@
 """Testes adicionais de cartões e permissões. Exige serviços Docker activos."""
 import os,uuid,sys,json
 import httpx
-from .smoke import api,login,register,BASE,CONTEXT
+from .smoke import api,login,register,BASE,CONTEXT,P
 
 def run():
     print('=== NANDBANK / CARTÕES, PERFIS E ASSETS ===',flush=True)
@@ -28,19 +28,43 @@ def run():
     assert frozen['status']=='FROZEN'
     active=api('POST','/api/cards/'+cid+'/unfreeze',token,{})
     assert active['status']=='ACTIVE'
+    # CRUD lógico: cliente recém-criado, intervenção regional autorizada e recuperação.
+    person=api('GET','/api/me',token)['user']
+    directory=api('GET','/api/admin/customers',manager)
+    assert any(u['id']==person['id'] for u in directory), 'Cliente não consta da base regional'
+    activity=api('GET','/api/admin/customers/'+person['id']+'/activity',manager)
+    assert any(a['id']==aid for a in activity['accounts'])
+    with httpx.Client(**CONTEXT) as h:
+        denied=h.patch(BASE+'/api/admin/customers/'+person['id']+'/status',headers={'Authorization':'Bearer '+europe},json={'status':'EXPIRED','reason':'Teste restricao regional'})
+        assert denied.status_code==403,('regional de fora',denied.status_code)
+    state=api('PATCH','/api/admin/customers/'+person['id']+'/status',manager,{'status':'EXPIRED','reason':'Teste académico de expiração'})
+    assert state['status']=='EXPIRED'
+    with httpx.Client(**CONTEXT) as h:
+        old=h.get(BASE+'/api/me',headers={'Authorization':'Bearer '+token})
+        assert old.status_code==403,('JWT deve bloquear conta expirada',old.status_code)
+        login_denied=h.post(BASE+'/api/auth/login',json={'email':person['email'],'password':P})
+        assert login_denied.status_code==403 and 'expirada' in login_denied.text.lower()
+    restored=api('PATCH','/api/admin/customers/'+person['id']+'/status',manager,{'status':'ACTIVE','reason':'Reposição após teste académico'})
+    assert restored['status']=='ACTIVE'
+    assert login(person['email'],P)
     node_actions=api('GET','/api/admin/node-actions',manager)
     assert isinstance(node_actions['agent_online'],bool)
     with httpx.Client(**CONTEXT) as h:
         no_control=h.post(BASE+'/api/admin/nodes/af/action',headers={'Authorization':'Bearer '+token},json={'action':'STOP_PRIMARY','reason':'MAINTENANCE'})
         assert no_control.status_code==403,('cliente não pode desligar nós',no_control.status_code)
         # Teste sem executar qualquer STOP real no servidor.
-        favicon=h.get(BASE+'/lion-mark.png')
+        # Interface premium React: não requer ficheiros legados /lion-mark.png ou /theme.css.
+        favicon=h.get(BASE+'/static/images/nandbank-lion-logo.png')
         assert favicon.status_code==200 and favicon.headers['content-type'].startswith('image/'),('logo HTTP',favicon.status_code,favicon.headers.get('content-type'))
-        css=h.get(BASE+'/theme.css')
-        assert css.status_code==200 and 'NandBank' in css.text,('tema HTTP',css.status_code)
         homepage=h.get(BASE+'/')
         assert homepage.status_code==200 and 'NandBank' in homepage.text
-    result={'result':'PASSOU','card_request':True,'regional_authorization':True,'card_approval':True,'card_freeze_unfreeze':True,'client_cannot_operate_nodes':True,'frontend_assets':True,'node_agent_available':node_actions['agent_online']}
+        import re
+        bundles=re.findall(r'/static/assets/[^\"\']+\.(?:css|js)',homepage.text)
+        assert bundles,('bundles React não encontrados',homepage.text[:350])
+        for bundle in bundles:
+            asset=h.get(BASE+bundle)
+            assert asset.status_code==200 and ('javascript' in asset.headers.get('content-type','') or 'css' in asset.headers.get('content-type','')),('asset React',bundle,asset.status_code,asset.headers.get('content-type'))
+    result={'result':'PASSOU','card_request':True,'regional_authorization':True,'card_approval':True,'card_freeze_unfreeze':True,'client_cannot_operate_nodes':True,'frontend_assets':True,'customer_management':True,'customer_expiration':True,'regional_customer_scope':True,'node_agent_available':node_actions['agent_online']}
     print(json.dumps(result,indent=2,ensure_ascii=False),flush=True)
     return 0
 

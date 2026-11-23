@@ -52,6 +52,18 @@ class Contracts(unittest.TestCase):
         g.app.dependency_overrides[g.bearer]=lambda:{'sub':'m','role':'regional_manager','region':'af','branch':None}
         r=client.post('/api/transfers',json={'source_id':'a','destination_id':'b','amount':'1.00','idempotency_key':'validkey123'})
         self.assertEqual(r.status_code,403)
+    def test_client_cannot_open_customer_directory(self):
+        g.app.dependency_overrides[g.bearer]=lambda:{'sub':'c','role':'client','region':'af','branch':'MZ-MPM'}
+        self.assertEqual(client.get('/api/admin/customers').status_code,403)
+    def test_teller_cannot_manage_customers(self):
+        g.app.dependency_overrides[g.bearer]=lambda:{'sub':'t','role':'teller','region':'af','branch':'MZ-MPM'}
+        self.assertEqual(client.patch('/api/admin/customers/test/status',json={'status':'EXPIRED','reason':'Motivo de teste'}).status_code,403)
+    def test_customer_status_validation(self):
+        from pydantic import ValidationError
+        with self.assertRaises(ValidationError):g.CustomerStatusChange(status='EXPIRED',reason='a')
+    def test_customer_edit_validation(self):
+        from pydantic import ValidationError
+        with self.assertRaises(ValidationError):g.CustomerUpdate(name='a',email='ab@example.invalid')
     def test_agent_needs_secret(self):
         r=client.get('/api/agent/jobs')
         self.assertEqual(r.status_code,403)
