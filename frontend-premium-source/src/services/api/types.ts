@@ -29,10 +29,24 @@ export interface GatewayMe {
   accounts: GatewayAccount[];
 }
 
+/** Filiais reais divulgadas pelo Gateway em GET /api/config. */
+export interface GatewayBranch {
+  code: string;
+  country: string;
+  city: string;
+  suggested_currency: string;
+}
+
+export interface GatewayRegion {
+  code: string;
+  name: string;
+  branches: GatewayBranch[];
+}
+
 export interface GatewayConfig {
   name?: string;
   currencies?: string[];
-  regions?: unknown;
+  regions?: GatewayRegion[];
   notice?: string;
 }
 

@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BrandLogo } from "@/components/nandbank/brand";
+import { GatewayBranchPicker } from "@/components/nandbank/branch-picker";
 import { errorMessage } from "@/lib/nandbank/query";
 import { isValidRegistrationPassword } from "@/lib/nandbank/validation";
 import { clearAccessToken, DEMO_MODE, gateway, roleHome, saveAccessToken } from "@/services/api/client";
@@ -149,6 +150,10 @@ export function RegisterPage() {
           event.preventDefault();
           setSuccessMessage(null);
           setFormError(null);
+          if (!branch) {
+            setFormError("Seleccione uma filial disponível.");
+            return;
+          }
           if (!isValidRegistrationPassword(password)) {
             setFormError("Use pelo menos 12 caracteres, com maiúscula, minúscula e número.");
             return;
@@ -165,8 +170,8 @@ export function RegisterPage() {
           </label>
           <label className="form-field">
             <span>Filial</span>
-            <Input required value={branch} onChange={(event) => setBranch(event.target.value)} placeholder="Código da filial fornecido pelo Gateway" />
-            <small>A filial é validada pelo servidor; a moeda é atribuída segundo a configuração regional.</small>
+            <GatewayBranchPicker value={branch} onChange={setBranch} disabled={mutation.isPending} />
+            <small>Seleccione uma filial real do Gateway. A moeda é atribuída automaticamente pelo servidor.</small>
           </label>
           <label className="form-field">
             <span>Palavra-passe</span>
@@ -190,7 +195,7 @@ export function RegisterPage() {
           </label>
           {formError && <p role="alert" className="form-message form-message-error">{formError}</p>}
           {successMessage && <p role="status" className="form-message form-message-success">{successMessage}</p>}
-          <Button type="submit" size="lg" className="min-h-12 w-full" disabled={mutation.isPending}>
+          <Button type="submit" size="lg" className="min-h-12 w-full" disabled={mutation.isPending || !branch}>
             {mutation.isPending ? "A criar conta…" : "Criar conta"} <ArrowRight aria-hidden="true" />
           </Button>
           <p className="auth-switch-copy">Já tem acesso? <Link to="/entrar">Entrar</Link></p>

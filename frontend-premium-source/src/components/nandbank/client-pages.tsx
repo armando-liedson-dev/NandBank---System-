@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { DashboardShell } from "@/components/nandbank/shells";
 import { BrandMark } from "@/components/nandbank/brand";
+import { GatewayBranchPicker } from "@/components/nandbank/branch-picker";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { isTransferTerminal, readPendingTransfer, transferStateMessage, writePendingTransfer, type PendingTransfer } from "@/lib/nandbank/transfer-flow";
 import { errorMessage, useNandQuery } from "@/lib/nandbank/query";
@@ -260,7 +261,7 @@ export function ClientAccountsPage() {
         <section className="form-section">
           <div className="form-section-heading"><span className="form-section-icon"><Building2 aria-hidden="true" /></span><div><p className="eyebrow eyebrow-ink">Nova conta</p><h3>Pedir uma conta adicional</h3><p>O Gateway valida a filial e atribui a moeda configurada.</p></div></div>
           <form className="inline-form" onSubmit={(event) => { event.preventDefault(); setFormMessage(null); create.mutate(); }}>
-            <label className="form-field"><span>Filial</span><Input value={branch} onChange={(event) => setBranch(event.target.value)} required placeholder="Código de filial aceite pelo Gateway" /></label>
+            <label className="form-field"><span>Filial</span><GatewayBranchPicker value={branch} onChange={setBranch} disabled={create.isPending} /></label>
             <Button type="submit" disabled={create.isPending || !branch.trim() || DEMO_MODE}>{create.isPending ? "A enviar…" : "Pedir conta"}<ArrowRight aria-hidden="true" /></Button>
           </form>
           {formMessage && <p role={create.isError ? "alert" : "status"} className={create.isError ? "form-message form-message-error" : "form-message form-message-success"}>{formMessage}</p>}
