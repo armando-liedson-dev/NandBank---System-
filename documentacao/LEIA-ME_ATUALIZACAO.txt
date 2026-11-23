@@ -1,0 +1,28 @@
+# NandBank — Actualizacao visual premium (Windows / Docker)
+
+Este pacote ACTUALIZA APENAS frontend/static. Nao muda backend, scripts de transferencia, Docker Compose, bases de dados nem credenciais.
+
+## Instalacao
+1. Descompactar todos os ficheiros do ZIP dentro da pasta NandBank, onde estao docker-compose.yml e .env. A pasta VISUAL_NOVO deve ficar em NandBank/VISUAL_NOVO.
+2. Docker Desktop deve estar aberto, com o sistema anteriormente instalado.
+3. Executar no PowerShell: .\APLICAR_VISUAL_NANDBANK.bat
+4. Abrir https://localhost:8443 e fazer Ctrl+F5.
+5. Executar .\TESTAR_NANDBANK.bat para testar as APIs e funcionalidades de base.
+
+## Copias de seguranca / reversao
+O script cria backups/visual_AAAAMMDD_HHMMSS e guarda o caminho no ficheiro .nandbank-visual-lastbackup.txt. Para voltar ao frontend anterior executar .\REVERTER_VISUAL_NANDBANK.bat.
+
+## Alteracoes
+- Identidade escura/dourada/marfim; leao original com transparência, sem fundo quadrado.
+- Pagina publica redesenhada; imagem hero guardada localmente sem CDN.
+- Painel cliente redesenhado: saldos reais por moeda, contas, actividade real dos ultimos 7 dias, transferencia recente e atalhos existentes.
+- Painel de gerentes com visual escuro, dados de nos e eventos reais, sem KPIs ficticios.
+- Paginas de nos e cartões estilizadas. Os cartoes continuam exclusivamente academicos, sem PAN/CVV reais.
+- Suporte responsive mobile e foco em acessibilidade.
+
+## Limites
+- Nao corrige o problema do agente Windows/TLS: a correcao do agente sera tratada separadamente.
+- O projecto continua a utilizar frontend estatico nativo (HTML/CSS/JS), sem npm. Migrar para Vue nao e necessario para este redesenho.
+- GitHub Pages tem um frontend demonstrativo diferente em pages/, mantido sem alteracoes por enquanto.
+- O pacote foi verificado com node --check, testes offline e Chromium com dados ficticios, nao com Docker real no teu Windows.
+- Se uma funcionalidade depender de API em falha, a sua disponibilidade nao e garantida pelo tema visual.

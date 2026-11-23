@@ -1,0 +1,11 @@
+NANDBANK - VALIDACAO LOCAL - 22/11/2026
+
+PASSOU: 33/33 verificacoes estruturais, sintaxe Python/JS, Compose YAML.
+PASSOU: 9/9 testes de contrato FastAPI com bases/servicos substituidos por mocks.
+PASSOU: 8 cenarios de interface GitHub Pages (DOM simulado).
+PASSOU: renderizacao de landing/login/cadastro na UI do Gateway (DOM simulado).
+PASSOU: compilacao Java legado (JDK) na preparacao.
+PASSOU: HTTP local estatico, seis ficheiros devolvidos com HTTP 200.
+PENDENTE: validacao com Docker Compose no Windows, PostgreSQL real, HTTPS/mTLS integrado, 2PC extremo a extremo, agente Windows e acesso externo GitHub Pages apos push.
+
+NOTA: nao se deve apresentar os testes estaticos/contratos como prova de operacoes bancarias integradas em Docker. Executar TESTAR_TUDO_WINDOWS.bat e documentar resultados reais.
