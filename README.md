@@ -37,11 +37,17 @@ O projecto foi desenvolvido para demonstrar, na prática, **distribuição geogr
 |:--|:--|:--|
 | **Aplicação real do protótipo** | `https://localhost:8443` | Interface ligada ao Gateway, bases de dados e serviços Docker no Windows |
 | **Telemóveis na rede local** | `https://IP_DO_PC:8443` | Acesso à mesma aplicação, sujeito à rede e aos certificados de laboratório |
-| **GitHub Pages** | [Publicação estática](https://armando-liedson-dev.github.io/NandBank---System-/) | Demonstração visual independente; **não executa transacções reais do protótipo** |
-| **Código-fonte** | [GitHub — branch Parte2](https://github.com/armando-liedson-dev/NandBank---System-/tree/Parte2) | Código, configurações, testes e documentação |
+| **GitHub Pages** | [Publicação estática](https://armando-liedson-dev.github.io/NandBank-System/) | Demonstração visual independente; **não executa transacções reais do protótipo** |
+| **Código-fonte** | [GitHub — branch main](https://github.com/armando-liedson-dev/NandBank-System/tree/main) | Código, configurações, testes e documentação |
 
 > [!NOTE]
 > A ligação acima do GitHub Pages corresponde ao endereço convencional do repositório; a sua disponibilidade depende da publicação ter sido activada no GitHub. O Pages disponibiliza apenas ficheiros estáticos. Para demonstrar PostgreSQL, 2PC, failover e SeaweedFS é necessário executar o sistema localmente.
+
+### GitHub Pages — o que é possível experimentar
+
+A pasta [`pages/`](pages/) contém HTML, CSS, JavaScript e recursos gráficos autónomos. A demonstração permite explorar a landing page, escolher perfis fictícios de cliente e gerente, consultar contas e saldos de exemplo, simular transferências com câmbio e comissão, consultar movimentos, alterar o estado de cartões e simular a falha e recuperação de nós no painel de infraestrutura. As alterações ocorrem no estado JavaScript da sessão, sem base de dados, autenticação real, TLS interno, 2PC ou controlo de contentores. Recarregar a página reinicia os dados de exemplo.
+
+A publicação utiliza **GitHub Actions**: `.github/workflows/pages.yml` valida os recursos, empacota exclusivamente `pages/` e publica o artefacto no ambiente `github-pages`. Em Settings → Pages, a origem deve ser **GitHub Actions**. O primeiro workflow após o merge falhou porque Pages não estava configurado; a publicação só está confirmada quando o workflow terminar com sucesso e o endereço abrir.
 
 ## ✨ Funcionalidades
 
@@ -97,7 +103,7 @@ flowchart LR
 ```
 
 > [!WARNING]
-> **Limites técnicos:** o *primary* e o *standby* de cada continente partilham a mesma base PostgreSQL; o failover é **de aplicação**, não de base de dados. A infraestrutura é executada num único computador. As transferências de ficheiros ocorrem entre **agentes auxiliares regionais**, não directamente entre os processos bancários. Ainda não foi demonstrada tolerância à perda de um servidor de armazenamento.
+> **Limites técnicos:** o NFS previsto no perfil `dfs` não iniciou no Docker Desktop devido à ausência do módulo NFS no kernel e foi parado. O SeaweedFS é a alternativa DFS em execução; não deve ser apresentado como NFS. o *primary* e o *standby* de cada continente partilham a mesma base PostgreSQL; o failover é **de aplicação**, não de base de dados. A infraestrutura é executada num único computador. As transferências de ficheiros ocorrem entre **agentes auxiliares regionais**, não directamente entre os processos bancários. Ainda não foi demonstrada tolerância à perda de um servidor de armazenamento.
 
 ### 🛠️ Tecnologias
 
@@ -149,11 +155,11 @@ Os directórios de correções antigas, backups e versões visuais históricas *
 
 **Windows 10/11**, **Docker Desktop** com motor Linux/WSL2, **Git** e recursos suficientes para executar os contentores. O primeiro arranque requer Internet para obter as imagens. A execução de todos os serviços exige memória considerável; recomenda-se um computador com pelo menos **12–16 GB de RAM** disponíveis no sistema.
 
-### 1. Obter a branch Parte2
+### 1. Obter a branch main
 
 ```powershell
-git clone --branch Parte2 https://github.com/armando-liedson-dev/NandBank---System-.git
-cd NandBank---System-
+git clone --branch main https://github.com/armando-liedson-dev/NandBank-System.git
+cd NandBank-System
 ```
 
 ### 2. Iniciar a aplicação bancária
@@ -231,6 +237,13 @@ docker compose -f docker-compose.yml -f docker-compose.fases45.yml ps
 > [!TIP]
 > Os ensaios das Fases 4 e 5 gravam evidências na pasta local `.private-backups/`, excluída do Git. O estado verde do CI não substitui testes reais de Docker, rede ou failover.
 
+### Estado de validação em 24/11/2026
+
+- 12 serviços bancários, gateway, HAProxy, serviço legado, 6 agentes DFS, master, filer, 2 volumes e exportador em execução; 7 PostgreSQL com estado `healthy`.
+- Ensaio de transferência de 40 EUR da Europa para África: interface confirmou a operação, com débito de 40,40 EUR e crédito de 2 804,40 MZN. O estado de manutenção também foi apresentado no ensaio de intervenção; a captura não demonstra sozinha o nó activo no instante exacto do compromisso.
+- Verificações GitHub Actions de código aprovadas no PR e no push para `main`; estas verificações não equivalem a um teste de integração completo.
+- NFS indisponível no ambiente Windows; nenhuma prova de perda de servidor DFS ou de failover de PostgreSQL. A confirmação da publicação Pages depende do novo deployment.
+
 ## 🔐 Segurança e consistência
 
 Adoptámos autenticação JWT, controlo de permissões, TLS/mTLS, comandos administrativos autorizados e chaves de idempotência. As transacções inter-regionais utilizam coordenação 2PC, permitindo decisões duráveis, embora possam existir estados temporariamente pendentes perante falhas.
@@ -258,7 +271,7 @@ O **NandBank** foi desenvolvido no âmbito da unidade curricular de **Sistemas D
 
 O projecto reúne conceitos de comunicação entre serviços, distribuição geográfica, disponibilidade, consistência transaccional, interoperabilidade, segurança e armazenamento de ficheiros.
 
-**Branch de entrega:** [`Parte2`](https://github.com/armando-liedson-dev/NandBank---System-/tree/Parte2). A branch `main` não é alterada por este procedimento de organização.
+**Branch oficial:** [`main`](https://github.com/armando-liedson-dev/NandBank-System/tree/main). A implementação de `Parte2` foi integrada pelo [Pull Request #1](https://github.com/armando-liedson-dev/NandBank-System/pull/1), em 24 de Novembro de 2026. A branch de desenvolvimento permanece preservada.
 
 ### Créditos e utilização
 
