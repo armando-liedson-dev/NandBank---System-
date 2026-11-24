@@ -1,0 +1,37 @@
+name: NandBank — Publicar GitHub Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: nandbank-pages
+  cancel-in-progress: true
+jobs:
+  publicacao:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Obter código
+        uses: actions/checkout@v4
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Validar frontend público
+        run: |
+          node --check pages/demo.js
+          test -s pages/index.html
+          test -s pages/theme.css
+          test -s pages/lion-mark.png
+          grep -q 'NandBank' pages/index.html
+      - name: Preparar publicação
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4

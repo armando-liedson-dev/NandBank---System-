@@ -29,10 +29,24 @@ export interface GatewayMe {
   accounts: GatewayAccount[];
 }
 
+/** Filiais reais divulgadas pelo Gateway em GET /api/config. */
+export interface GatewayBranch {
+  code: string;
+  country: string;
+  city: string;
+  suggested_currency: string;
+}
+
+export interface GatewayRegion {
+  code: string;
+  name: string;
+  branches: GatewayBranch[];
+}
+
 export interface GatewayConfig {
   name?: string;
   currencies?: string[];
-  regions?: unknown;
+  regions?: GatewayRegion[];
   notice?: string;
 }
 
@@ -130,4 +144,25 @@ export interface GatewayQuote {
 export interface GatewayErrorPayload {
   detail?: string | { message?: string };
   message?: string;
+}
+export type CustomerState = "ACTIVE" | "SUSPENDED" | "SUSPECT" | "EXPIRED";
+export interface GatewayCustomer {
+  regions?: string[] | null;
+  id: string;
+  name: string;
+  email: string;
+  region: string | null;
+  branch: string | null;
+  status: CustomerState;
+  status_reason: string;
+  status_changed_at?: string | null;
+  account_count: number;
+  created_at: string;
+}
+export interface GatewayCustomerActivity {
+  customer: GatewayCustomer;
+  accounts: Array<{ id: string; region: string; branch: string; currency: string; created_at: string }>;
+  operations: Array<{ id: string; operation_type: string; amount_minor: number; account_id: string; status: string; created_at: string }>;
+  transfers: Array<{ id: string; source_id: string; destination_id: string; amount_minor: number; source_currency: string; status: string; created_at: string }>;
+  cards: Array<{ id: string; account_id: string; last4: string; status: string; created_at: string }>;
 }

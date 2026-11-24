@@ -1,0 +1,56 @@
+name: NandBank — Verificações do código
+on:
+  push:
+    branches: [main, Parte2]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verificacao:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verificar código e estrutura
+        run: |
+          python -m pip install PyYAML
+          python ferramentas/VALIDAR_NANDBANK.py
+          node tests/test_pages.cjs
+          node tests/test_live_frontend.cjs
+      - name: Validar interface React real
+        working-directory: frontend-premium-source
+        run: |
+          npm ci --no-audit --no-fund
+          npm run test:critical
+          npm run build:gateway
+      - name: Testar contratos da API (com serviços falsos, sem BD)
+        run: |
+          python -m pip install -r backend/requirements.txt
+          python -m unittest discover -s tests -p 'test_backend_contract.py' -v
+      - name: Compilar Java legado
+        run: |
+          mkdir -p /tmp/nandbank-classes
+          javac --add-modules jdk.httpserver -encoding UTF-8 -d /tmp/nandbank-classes infra/legacy/src/main/java/mz/globalscale/LegacyServer.java
+      - name: Validar configuração Docker Compose
+        env:
+          PG_PASSWORD: ci-placeholder
+          CERT_PASSWORD: ci-placeholder
+          LAN_IP: 127.0.0.1
+          ADMIN_PASSWORD: ci-placeholder
+          REGIONAL_PASSWORD: ci-placeholder
+          BRANCH_PASSWORD: ci-placeholder
+          TELLER_PASSWORD: ci-placeholder
+          MANAGER_AF_PASSWORD: ci-placeholder
+          MANAGER_AS_PASSWORD: ci-placeholder
+          MANAGER_NA_PASSWORD: ci-placeholder
+          MANAGER_SA_PASSWORD: ci-placeholder
+          MANAGER_OC_PASSWORD: ci-placeholder
+          INTEGRITY_KEY: ci-placeholder
+          CONTROL_AGENT_KEY: ci-placeholder
+        run: docker compose config --quiet

@@ -13,6 +13,7 @@ import {
   LogOut,
   Menu,
   MoreHorizontal,
+  Users,
   Network,
   ReceiptText,
   Settings2,
@@ -38,8 +39,22 @@ const regionalLinks = [
   { title: "Visão geral", to: "/gerente/visao-geral", icon: Gauge },
   { title: "Infraestrutura", to: "/gerente/infraestrutura", icon: Network },
   { title: "Operações", to: "/gerente/operacoes", icon: ReceiptText },
+  { title: "Clientes", to: "/gerente/clientes", icon: Users },
+] as const;
+const globalLinks = [
   { title: "Visão global", to: "/gerente-global/visao-geral", icon: Globe2 },
+  { title: "Infraestrutura", to: "/gerente/infraestrutura", icon: Network },
+  { title: "Operações", to: "/gerente/operacoes", icon: ReceiptText },
+  { title: "Base de clientes", to: "/gerente-global/clientes", icon: Users },
   { title: "Auditoria global", to: "/gerente-global/auditoria", icon: FileClock },
+] as const;
+const branchLinks = [
+  { title: "Visão geral", to: "/filial/visao-geral", icon: Gauge },
+  { title: "Operações de balcão", to: "/filial/operacoes", icon: ReceiptText },
+  { title: "Clientes da filial", to: "/filial/clientes", icon: Users },
+] as const;
+const tellerLinks = [
+  { title: "Operações de balcão", to: "/balcao/operacoes", icon: ReceiptText },
 ] as const;
 
 export function SiteHeader() {
@@ -137,14 +152,14 @@ export function DashboardShell({
   children: ReactNode;
   title: string;
   eyebrow: string;
-  mode: "customer" | "manager";
+  mode: "customer" | "manager" | "global" | "branch" | "teller";
 }) {
   const currentPath = useRouterState({ select: (router) => router.location.pathname });
   const [moreOpen, setMoreOpen] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const links = mode === "customer" ? customerLinks : regionalLinks;
-  const mobileLinks = mode === "customer" ? customerLinks.slice(0, 4) : links.slice(0, 4);
+  const links = mode === "customer" ? customerLinks : mode === "global" ? globalLinks : mode === "branch" ? branchLinks : mode === "teller" ? tellerLinks : regionalLinks;
+  const mobileLinks = links.slice(0, 4);
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -154,7 +169,7 @@ export function DashboardShell({
   }
 
   return (
-    <div className={mode === "manager" ? "app-frame app-frame-dark" : "app-frame"}>
+    <div className={mode !== "customer" ? "app-frame app-frame-dark" : "app-frame"}>
       <aside className="app-sidebar hidden lg:flex">
         <div className="sidebar-brand"><BrandLogo compact /></div>
         <div className="sidebar-divider" />
@@ -233,7 +248,7 @@ export function DashboardShell({
       </nav>
       {moreOpen && (
         <div className="mobile-more-panel lg:hidden">
-          {(mode === "customer" ? customerLinks.slice(4) : regionalLinks).map((item) => {
+          {links.slice(4).map((item) => {
             const Icon = item.icon;
             return (
               <Link key={item.to} to={item.to} onClick={() => setMoreOpen(false)}>

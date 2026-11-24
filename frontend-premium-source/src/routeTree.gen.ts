@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CriarContaRouteImport } from './routes/criar-conta'
 import { Route as EntrarRouteImport } from './routes/entrar'
+import { Route as BalcaoOperacoesRouteImport } from './routes/balcao.operacoes'
 import { Route as ClienteCartoesRouteImport } from './routes/cliente.cartoes'
 import { Route as ClienteContasRouteImport } from './routes/cliente.contas'
 import { Route as ClienteMovimentosRouteImport } from './routes/cliente.movimentos'
@@ -19,8 +20,13 @@ import { Route as ClienteServicosRouteImport } from './routes/cliente.servicos'
 import { Route as ClienteSistemaRouteImport } from './routes/cliente.sistema'
 import { Route as ClienteTransferirRouteImport } from './routes/cliente.transferir'
 import { Route as ClienteVisaoGeralRouteImport } from './routes/cliente.visao-geral'
+import { Route as FilialClientesRouteImport } from './routes/filial.clientes'
+import { Route as FilialOperacoesRouteImport } from './routes/filial.operacoes'
+import { Route as FilialVisaoGeralRouteImport } from './routes/filial.visao-geral'
 import { Route as GerenteGlobalAuditoriaRouteImport } from './routes/gerente-global.auditoria'
+import { Route as GerenteGlobalClientesRouteImport } from './routes/gerente-global.clientes'
 import { Route as GerenteGlobalVisaoGeralRouteImport } from './routes/gerente-global.visao-geral'
+import { Route as GerenteClientesRouteImport } from './routes/gerente.clientes'
 import { Route as GerenteInfraestruturaRouteImport } from './routes/gerente.infraestrutura'
 import { Route as GerenteOperacoesRouteImport } from './routes/gerente.operacoes'
 import { Route as GerenteVisaoGeralRouteImport } from './routes/gerente.visao-geral'
@@ -38,6 +44,11 @@ const CriarContaRoute = CriarContaRouteImport.update({
 const EntrarRoute = EntrarRouteImport.update({
   id: '/entrar',
   path: '/entrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BalcaoOperacoesRoute = BalcaoOperacoesRouteImport.update({
+  id: '/balcao/operacoes',
+  path: '/balcao/operacoes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClienteCartoesRoute = ClienteCartoesRouteImport.update({
@@ -75,14 +86,39 @@ const ClienteVisaoGeralRoute = ClienteVisaoGeralRouteImport.update({
   path: '/cliente/visao-geral',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FilialClientesRoute = FilialClientesRouteImport.update({
+  id: '/filial/clientes',
+  path: '/filial/clientes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FilialOperacoesRoute = FilialOperacoesRouteImport.update({
+  id: '/filial/operacoes',
+  path: '/filial/operacoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FilialVisaoGeralRoute = FilialVisaoGeralRouteImport.update({
+  id: '/filial/visao-geral',
+  path: '/filial/visao-geral',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GerenteGlobalAuditoriaRoute = GerenteGlobalAuditoriaRouteImport.update({
   id: '/gerente-global/auditoria',
   path: '/gerente-global/auditoria',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GerenteGlobalClientesRoute = GerenteGlobalClientesRouteImport.update({
+  id: '/gerente-global/clientes',
+  path: '/gerente-global/clientes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GerenteGlobalVisaoGeralRoute = GerenteGlobalVisaoGeralRouteImport.update({
   id: '/gerente-global/visao-geral',
   path: '/gerente-global/visao-geral',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GerenteClientesRoute = GerenteClientesRouteImport.update({
+  id: '/gerente/clientes',
+  path: '/gerente/clientes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GerenteInfraestruturaRoute = GerenteInfraestruturaRouteImport.update({
@@ -105,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/criar-conta': typeof CriarContaRoute
   '/entrar': typeof EntrarRoute
+  '/balcao/operacoes': typeof BalcaoOperacoesRoute
   '/cliente/cartoes': typeof ClienteCartoesRoute
   '/cliente/contas': typeof ClienteContasRoute
   '/cliente/movimentos': typeof ClienteMovimentosRoute
@@ -112,8 +149,13 @@ export interface FileRoutesByFullPath {
   '/cliente/sistema': typeof ClienteSistemaRoute
   '/cliente/transferir': typeof ClienteTransferirRoute
   '/cliente/visao-geral': typeof ClienteVisaoGeralRoute
+  '/filial/clientes': typeof FilialClientesRoute
+  '/filial/operacoes': typeof FilialOperacoesRoute
+  '/filial/visao-geral': typeof FilialVisaoGeralRoute
   '/gerente-global/auditoria': typeof GerenteGlobalAuditoriaRoute
+  '/gerente-global/clientes': typeof GerenteGlobalClientesRoute
   '/gerente-global/visao-geral': typeof GerenteGlobalVisaoGeralRoute
+  '/gerente/clientes': typeof GerenteClientesRoute
   '/gerente/infraestrutura': typeof GerenteInfraestruturaRoute
   '/gerente/operacoes': typeof GerenteOperacoesRoute
   '/gerente/visao-geral': typeof GerenteVisaoGeralRoute
@@ -122,6 +164,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/criar-conta': typeof CriarContaRoute
   '/entrar': typeof EntrarRoute
+  '/balcao/operacoes': typeof BalcaoOperacoesRoute
   '/cliente/cartoes': typeof ClienteCartoesRoute
   '/cliente/contas': typeof ClienteContasRoute
   '/cliente/movimentos': typeof ClienteMovimentosRoute
@@ -129,8 +172,13 @@ export interface FileRoutesByTo {
   '/cliente/sistema': typeof ClienteSistemaRoute
   '/cliente/transferir': typeof ClienteTransferirRoute
   '/cliente/visao-geral': typeof ClienteVisaoGeralRoute
+  '/filial/clientes': typeof FilialClientesRoute
+  '/filial/operacoes': typeof FilialOperacoesRoute
+  '/filial/visao-geral': typeof FilialVisaoGeralRoute
   '/gerente-global/auditoria': typeof GerenteGlobalAuditoriaRoute
+  '/gerente-global/clientes': typeof GerenteGlobalClientesRoute
   '/gerente-global/visao-geral': typeof GerenteGlobalVisaoGeralRoute
+  '/gerente/clientes': typeof GerenteClientesRoute
   '/gerente/infraestrutura': typeof GerenteInfraestruturaRoute
   '/gerente/operacoes': typeof GerenteOperacoesRoute
   '/gerente/visao-geral': typeof GerenteVisaoGeralRoute
@@ -140,6 +188,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/criar-conta': typeof CriarContaRoute
   '/entrar': typeof EntrarRoute
+  '/balcao/operacoes': typeof BalcaoOperacoesRoute
   '/cliente/cartoes': typeof ClienteCartoesRoute
   '/cliente/contas': typeof ClienteContasRoute
   '/cliente/movimentos': typeof ClienteMovimentosRoute
@@ -147,8 +196,13 @@ export interface FileRoutesById {
   '/cliente/sistema': typeof ClienteSistemaRoute
   '/cliente/transferir': typeof ClienteTransferirRoute
   '/cliente/visao-geral': typeof ClienteVisaoGeralRoute
+  '/filial/clientes': typeof FilialClientesRoute
+  '/filial/operacoes': typeof FilialOperacoesRoute
+  '/filial/visao-geral': typeof FilialVisaoGeralRoute
   '/gerente-global/auditoria': typeof GerenteGlobalAuditoriaRoute
+  '/gerente-global/clientes': typeof GerenteGlobalClientesRoute
   '/gerente-global/visao-geral': typeof GerenteGlobalVisaoGeralRoute
+  '/gerente/clientes': typeof GerenteClientesRoute
   '/gerente/infraestrutura': typeof GerenteInfraestruturaRoute
   '/gerente/operacoes': typeof GerenteOperacoesRoute
   '/gerente/visao-geral': typeof GerenteVisaoGeralRoute
@@ -159,6 +213,7 @@ export interface FileRouteTypes {
     | '/'
     | '/criar-conta'
     | '/entrar'
+    | '/balcao/operacoes'
     | '/cliente/cartoes'
     | '/cliente/contas'
     | '/cliente/movimentos'
@@ -166,8 +221,13 @@ export interface FileRouteTypes {
     | '/cliente/sistema'
     | '/cliente/transferir'
     | '/cliente/visao-geral'
+    | '/filial/clientes'
+    | '/filial/operacoes'
+    | '/filial/visao-geral'
     | '/gerente-global/auditoria'
+    | '/gerente-global/clientes'
     | '/gerente-global/visao-geral'
+    | '/gerente/clientes'
     | '/gerente/infraestrutura'
     | '/gerente/operacoes'
     | '/gerente/visao-geral'
@@ -176,6 +236,7 @@ export interface FileRouteTypes {
     | '/'
     | '/criar-conta'
     | '/entrar'
+    | '/balcao/operacoes'
     | '/cliente/cartoes'
     | '/cliente/contas'
     | '/cliente/movimentos'
@@ -183,8 +244,13 @@ export interface FileRouteTypes {
     | '/cliente/sistema'
     | '/cliente/transferir'
     | '/cliente/visao-geral'
+    | '/filial/clientes'
+    | '/filial/operacoes'
+    | '/filial/visao-geral'
     | '/gerente-global/auditoria'
+    | '/gerente-global/clientes'
     | '/gerente-global/visao-geral'
+    | '/gerente/clientes'
     | '/gerente/infraestrutura'
     | '/gerente/operacoes'
     | '/gerente/visao-geral'
@@ -193,6 +259,7 @@ export interface FileRouteTypes {
     | '/'
     | '/criar-conta'
     | '/entrar'
+    | '/balcao/operacoes'
     | '/cliente/cartoes'
     | '/cliente/contas'
     | '/cliente/movimentos'
@@ -200,8 +267,13 @@ export interface FileRouteTypes {
     | '/cliente/sistema'
     | '/cliente/transferir'
     | '/cliente/visao-geral'
+    | '/filial/clientes'
+    | '/filial/operacoes'
+    | '/filial/visao-geral'
     | '/gerente-global/auditoria'
+    | '/gerente-global/clientes'
     | '/gerente-global/visao-geral'
+    | '/gerente/clientes'
     | '/gerente/infraestrutura'
     | '/gerente/operacoes'
     | '/gerente/visao-geral'
@@ -211,6 +283,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CriarContaRoute: typeof CriarContaRoute
   EntrarRoute: typeof EntrarRoute
+  BalcaoOperacoesRoute: typeof BalcaoOperacoesRoute
   ClienteCartoesRoute: typeof ClienteCartoesRoute
   ClienteContasRoute: typeof ClienteContasRoute
   ClienteMovimentosRoute: typeof ClienteMovimentosRoute
@@ -218,8 +291,13 @@ export interface RootRouteChildren {
   ClienteSistemaRoute: typeof ClienteSistemaRoute
   ClienteTransferirRoute: typeof ClienteTransferirRoute
   ClienteVisaoGeralRoute: typeof ClienteVisaoGeralRoute
+  FilialClientesRoute: typeof FilialClientesRoute
+  FilialOperacoesRoute: typeof FilialOperacoesRoute
+  FilialVisaoGeralRoute: typeof FilialVisaoGeralRoute
   GerenteGlobalAuditoriaRoute: typeof GerenteGlobalAuditoriaRoute
+  GerenteGlobalClientesRoute: typeof GerenteGlobalClientesRoute
   GerenteGlobalVisaoGeralRoute: typeof GerenteGlobalVisaoGeralRoute
+  GerenteClientesRoute: typeof GerenteClientesRoute
   GerenteInfraestruturaRoute: typeof GerenteInfraestruturaRoute
   GerenteOperacoesRoute: typeof GerenteOperacoesRoute
   GerenteVisaoGeralRoute: typeof GerenteVisaoGeralRoute
@@ -246,6 +324,13 @@ declare module '@tanstack/react-router' {
       path: '/entrar'
       fullPath: '/entrar'
       preLoaderRoute: typeof EntrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/balcao/operacoes': {
+      id: '/balcao/operacoes'
+      path: '/balcao/operacoes'
+      fullPath: '/balcao/operacoes'
+      preLoaderRoute: typeof BalcaoOperacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cliente/cartoes': {
@@ -297,6 +382,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClienteVisaoGeralRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/filial/clientes': {
+      id: '/filial/clientes'
+      path: '/filial/clientes'
+      fullPath: '/filial/clientes'
+      preLoaderRoute: typeof FilialClientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/filial/operacoes': {
+      id: '/filial/operacoes'
+      path: '/filial/operacoes'
+      fullPath: '/filial/operacoes'
+      preLoaderRoute: typeof FilialOperacoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/filial/visao-geral': {
+      id: '/filial/visao-geral'
+      path: '/filial/visao-geral'
+      fullPath: '/filial/visao-geral'
+      preLoaderRoute: typeof FilialVisaoGeralRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/gerente-global/auditoria': {
       id: '/gerente-global/auditoria'
       path: '/gerente-global/auditoria'
@@ -304,11 +410,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GerenteGlobalAuditoriaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/gerente-global/clientes': {
+      id: '/gerente-global/clientes'
+      path: '/gerente-global/clientes'
+      fullPath: '/gerente-global/clientes'
+      preLoaderRoute: typeof GerenteGlobalClientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/gerente-global/visao-geral': {
       id: '/gerente-global/visao-geral'
       path: '/gerente-global/visao-geral'
       fullPath: '/gerente-global/visao-geral'
       preLoaderRoute: typeof GerenteGlobalVisaoGeralRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gerente/clientes': {
+      id: '/gerente/clientes'
+      path: '/gerente/clientes'
+      fullPath: '/gerente/clientes'
+      preLoaderRoute: typeof GerenteClientesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gerente/infraestrutura': {
@@ -339,6 +459,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CriarContaRoute: CriarContaRoute,
   EntrarRoute: EntrarRoute,
+  BalcaoOperacoesRoute: BalcaoOperacoesRoute,
   ClienteCartoesRoute: ClienteCartoesRoute,
   ClienteContasRoute: ClienteContasRoute,
   ClienteMovimentosRoute: ClienteMovimentosRoute,
@@ -346,8 +467,13 @@ const rootRouteChildren: RootRouteChildren = {
   ClienteSistemaRoute: ClienteSistemaRoute,
   ClienteTransferirRoute: ClienteTransferirRoute,
   ClienteVisaoGeralRoute: ClienteVisaoGeralRoute,
+  FilialClientesRoute: FilialClientesRoute,
+  FilialOperacoesRoute: FilialOperacoesRoute,
+  FilialVisaoGeralRoute: FilialVisaoGeralRoute,
   GerenteGlobalAuditoriaRoute: GerenteGlobalAuditoriaRoute,
+  GerenteGlobalClientesRoute: GerenteGlobalClientesRoute,
   GerenteGlobalVisaoGeralRoute: GerenteGlobalVisaoGeralRoute,
+  GerenteClientesRoute: GerenteClientesRoute,
   GerenteInfraestruturaRoute: GerenteInfraestruturaRoute,
   GerenteOperacoesRoute: GerenteOperacoesRoute,
   GerenteVisaoGeralRoute: GerenteVisaoGeralRoute,
@@ -355,13 +481,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

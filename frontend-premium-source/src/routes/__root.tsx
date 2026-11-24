@@ -87,7 +87,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: import.meta.env["VITE_LOCAL_ASSETS"] === "true" ? "/static/favicon.png" : "/favicon.png", type: "image/png" },
     ],
   }),
-  shellComponent: import.meta.env.VITE_GATEWAY_BUILD === "true" ? undefined : RootShell,
+  ...(import.meta.env["VITE_GATEWAY_BUILD"] === "true" ? {} : { shellComponent: RootShell }),
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,

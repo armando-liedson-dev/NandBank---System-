@@ -40,3 +40,44 @@ backups/
 *.pid
 .nandbank-*
 frontend-premium-source/backup-*/
+
+# Scripts SQL de esquema são codigo-fonte, nao dumps privados.
+!infra/sql/global.sql
+!infra/sql/regional.sql
+
+# Pacote de correccoes descompactado (nunca versionar por engano).
+NandBank_FINAL/
+NandBank_PATCH/
+.env
+.env.*
+!.env.example
+.private-backups/
+__pycache__/
+*.pyc
+node_modules/
+dist/
+build/
+*.log
+certs/
+*.key
+*.pem
+
+# Material historico local: nao publicar no GitHub
+pacote-organizacao/
+CORRECAO_NANDBANK/
+VISUAL_NOVO/
+documentacao/
+CORRECAO_DEFINITIVA_AGENTE_NANDBANK.ps1
+CORRIGIR_AGENTE_NANDBANK.ps1
+FASES_3_4_CORRIGIDAS.ps1
+FASES_3_4_SEGURAS.ps1
+INSTALAR_AGENTE_AUTOMATICO_NANDBANK.ps1
+LIMPEZA_COMPLETA_CLIENTES.ps1
+LEIA_ME.txt
+APLICAR_VISUAL_NANDBANK.bat
+CORRIGIR_E_INICIAR_NANDBANK.bat
+REVERTER_VISUAL_NANDBANK.bat
+TESTAR_NANDBANK.bat
+DEMO_FAILOVER_WINDOWS.bat
+MEDIR_LATENCIA_WINDOWS.bat
+scripts/AGENTE_NOS_WINDOWS.ps1.bak*
