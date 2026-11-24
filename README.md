@@ -1,189 +1,277 @@
-# NandBank — Banco Digital Distribuído
+<div align="center">
 
-**Projecto académico de Sistemas Distribuídos e Paralelos · ISUTC · 2026**
+<img src="pages/lion-mark.png" alt="NandBank — símbolo do leão" width="105" />
 
-O NandBank demonstra operações financeiras **fictícias** entre seis continentes, com bases PostgreSQL regionais, transferências 2PC, autenticação, controlo de acessos, câmbio e recuperação de falhas de instâncias de aplicação.
+# NandBank
 
-> **Importante:** não é um banco verdadeiro. Não processa dinheiro real, não emite cartões Visa/Mastercard e não substitui um serviço financeiro regulado.
+### Banco digital distribuído · Seis continentes. Uma rede.
 
-## Acesso: o que funciona em cada ambiente
+**Uma plataforma bancária académica que demonstra transacções entre regiões, alta disponibilidade de aplicação, controlo de nós e armazenamento distribuído de ficheiros.**
 
-| Ambiente | Acesso | O que é possível |
-|---|---|---|
-| **GitHub Pages** | Público pela Internet | Landing page, ecrãs de cliente/gerente, demonstração visual de contas, transferências, cartões e falhas **sem API**. Nada é gravado nos bancos de dados reais. |
-| **Windows + Docker Desktop** | `https://localhost:8443` no PC; `https://IP-DO-PC:8443` em telemóveis na mesma rede | Login real do protótipo, contas fictícias persistidas, depósito autorizado, levantamento, transferência 2PC, PDF, cartões com aprovação, monitorização e controlo administrativo dos nós. |
+[![Python](https://img.shields.io/badge/Backend-Python%20%7C%20FastAPI-009688?style=for-the-badge&logo=python&logoColor=white)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/Frontend-React%20%7C%20TypeScript-149eca?style=for-the-badge&logo=react&logoColor=white)](https://react.dev/)
+[![PostgreSQL](https://img.shields.io/badge/Base%20de%20dados-PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Infraestrutura-Docker-2496ed?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![SeaweedFS](https://img.shields.io/badge/Ficheiros-SeaweedFS-2b846b?style=for-the-badge)](https://github.com/seaweedfs/seaweedfs)
 
-O GitHub Pages **não executa Python, PostgreSQL, Docker nem coordenação 2PC**. O docente pode abrir a landing page e explorar a interface de qualquer lugar; para avaliar a execução distribuída deve executar o projecto no Windows e seguir o guia de demonstração. Não exponha a porta 8443 à Internet sem projecto de segurança adequado.
+**Projecto académico · Sistemas Distribuídos e Paralelos · ISUTC · 2026**
 
-## Funcionalidades implementadas no backend
+[Visão geral](#-visão-geral) · [Funcionalidades](#-funcionalidades) · [Arquitectura](#-arquitectura-do-sistema) · [Instalação](#-executar-localmente) · [Testes](#-testes-e-evidências) · [Documentação](#-documentação)
 
-- **6 continentes:** África (AF), Europa (EU), Ásia (AS), América do Norte (NA), América do Sul (SA), Oceânia (OC).
-- **12 instâncias de aplicação:** principal e reserva em cada região, com HAProxy e verificações de saúde.
-- **7 bases PostgreSQL:** uma por continente e uma base global para utilizadores, directório, FX e decisões transaccionais.
-- **Autenticação JWT RS256:** cliente, gerente de filial, operador de balcão, gerente regional e gerente global.
-- **Contas:** abertura com moeda definida pela filial, consulta de saldos, movimentos e detalhes NIB/IBAN/SWIFT **demonstrativos**.
-- **Operações:** depósitos/levantamentos por operadores autorizados; transferência ACID local e 2PC entre continentes, com idempotência.
-- **Câmbio:** EUR, MZN, USD, CNY, ZAR e GHS; taxas iniciais fictícias, possibilidade de alteração por gerente global.
-- **Comprovativos:** PDF apenas para transferência confirmada.
-- **Cartões digitais académicos:** cliente solicita, gerente regional/global aprova ou recusa; titular congela e descongela. Apenas últimos quatro dígitos fictícios; não há PAN/CVV real, compras por cartão ou integração com bandeiras.
-- **Nós:** gerente regional/global solicita desligar ou ligar o principal. Agente limitado no Windows executa `docker compose stop`/`up` para os seis serviços permitidos, com histórico e motivos. Em paragens programadas, Docker recebe tempo para término de pedidos. Falhas abruptas são cobertas pela recuperação transaccional conforme o estado durável.
-- **Interoperação:** serviço legado Java 21 via HTTPS/mTLS e HMAC; API Python/FastAPI; PostgreSQL via TLS.
-
-### Limites de resiliência
-
-Principal e standby de cada região **partilham o mesmo PostgreSQL**. Assim o failover demonstrado é de aplicação, **não de base de dados**. O ambiente corre num único PC; uma falha total do PC ou Docker interrompe todos os nós. O 2PC é durável mas pode ficar temporariamente pendente se o coordenador ou participantes estiverem inacessíveis. Só afirmar um teste aprovado quando o executar e registar o resultado no Windows.
-
-## Estrutura do repositório
-
-```text
-NandBank/
-├── pages/                  # GitHub Pages: frontend público DEMO (sem API)
-├── frontend/static/        # frontend servido pelo Gateway real no Docker
-├── backend/app/            # Gateway, JWT, cartões, coordenador 2PC e nós
-├── infra/sql/              # PostgreSQL global e regional
-├── infra/legacy/           # serviço Java 21
-├── infra/haproxy.cfg       # encaminhamento principal/standby
-├── scripts/                # instalação, agente Windows, testes e failover
-├── .github/workflows/      # CI e publicação GitHub Pages
-├── docs/                   # arquitectura, defesa, segurança e limites
-├── docker-compose.yml
-├── INICIAR_WINDOWS.bat
-├── INICIAR_NANDBANK.bat
-├── TESTAR_TUDO_WINDOWS.bat
-├── VALIDAR_NANDBANK.py
-└── README.md
-```
-
-## Como executar no Windows
-
-**Pré-requisitos:** Windows 10/11, Docker Desktop com Linux/WSL2, memória disponível e ligação para descarregar imagens na primeira execução. Os contentores podem consumir bastante RAM; recomenda-se 12–16 GB de memória total. Os telemóveis têm de estar na mesma rede do PC para a demonstração real.
-
-1. Descarregar o repositório ou extrair o ZIP para uma pasta curta, por exemplo `C:\NandBank`.
-2. Abrir Docker Desktop e aguardar até aparecer **Running**.
-3. Executar **`INICIAR_WINDOWS.bat`** pela primeira vez (o script cria `.env` e `.credentials`, constrói as imagens, prepara certificados e inicia 6 nós + serviços auxiliares).
-4. No Windows, abrir **https://localhost:8443**. No telemóvel, usar o IP real do PC, por exemplo **https://172.20.10.2:8443**, se esse for o endereço IPv4 actual.
-5. O agente Windows deve iniciar com o sistema e aparecer ligado no painel **Nós continentais**. Para diagnosticar o agente, executar o script `scripts\AGENTE_NOS_WINDOWS.ps1` numa janela PowerShell do servidor.
-6. Consultar credenciais com `Get-Content .credentials`. **Não as publicar nem enviar para o GitHub.**
-
-Na primeira abertura em telemóveis, o certificado auto-assinado pode não ser reconhecido. É preciso confiar na CA de laboratório **apenas em dispositivos de teste autorizados**. O acesso pode exigir permissão da Firewall Windows na porta `8443`, apenas numa rede privada de confiança. Não remover TLS/mTLS para contornar o aviso.
-
-Para alterações de código no Windows:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\INICIAR_WINDOWS.ps1 -Rebuild
-```
-
-**Nunca** usar `docker compose down -v` se quiser preservar os dados de demonstração. `docker compose stop` pára sem eliminar volumes.
-
-### Perfis de demonstração
-
-| Papel | Email inicial | Âmbito |
-|---|---|---|
-| Gerente global | `admin@nandbank.local` | Todas as regiões e câmbio |
-| Gerente África | `regional.af@nandbank.local` | África |
-| Gerente Europa | `regional.eu@nandbank.local` | Europa |
-| Gerente Ásia | `regional.as@nandbank.local` | Ásia |
-| Gerente América do Norte | `regional.na@nandbank.local` | América do Norte |
-| Gerente América do Sul | `regional.sa@nandbank.local` | América do Sul |
-| Gerente Oceânia | `regional.oc@nandbank.local` | Oceânia |
-| Gerente filial Maputo | `filial.maputo@nandbank.local` | Filial Maputo |
-| Operador Maputo | `balcao.maputo@nandbank.local` | Balcão Maputo |
-| Cliente | Registo pela interface | Apenas as suas contas |
-
-As palavras-passe dos nove perfis internos são geradas localmente **apenas na primeira inicialização** quando `.env` ainda não existe. Aparecem em `.credentials` e **não mudam a cada arranque**. Quando a rede muda, o instalador actualiza o endereço dos telemóveis em `.credentials` sem substituir as palavras-passe. Para compatibilidade com volumes antigos, os emails `@globalscale.local` anteriores continuam válidos enquanto os dados preexistentes forem conservados.
-
-A sequência semelhante a uma palavra-passe que aparece depois do email do gerente global em `.credentials` **é a palavra-passe da sua conta de administração**, não é uma chave de API e **nunca deve ser colocada no README, GitHub, relatório, captura de ecrã ou mensagem pública**. O ficheiro `.credentials` e o `.env` estão excluídos do Git. Se já apareceram em documentos partilhados, altere-os também na base de dados: mudar apenas a variável em `.env` não substitui o hash de uma conta já criada.
-
-### Áreas de utilização
-
-| Perfil | Página inicial | Operações disponibilizadas |
-|---|---|---|
-| Cliente | `/cliente/visao-geral` | Contas próprias, transferências, cartões e movimentos |
-| Gerente regional | `/gerente/visao-geral` | Estado regional, operações, cartões e registos regionais de clientes |
-| Gerente global | `/gerente-global/visao-geral` | Rede completa, auditoria e gestão de todos os clientes |
-| Gerente de filial | `/filial/visao-geral` | Clientes, contas e operações da filial Maputo |
-| Operador de balcão | `/balcao/operacoes` | Depósito/levantamento em contas da filial, histórico autorizado |
-
-A área **Base de dados de clientes** permite consultar os registos e movimentos, actualizar nome e email, e alterar o estado com justificação: `ACTIVE`, `SUSPENDED`, `SUSPECT` ou `EXPIRED`. `EXPIRED` substitui a eliminação física por exclusão lógica: o titular recebe a mensagem **"Conta expirada!"** ao tentar entrar, e todos os seus saldos e registos de auditoria permanecem intactos. A suspensão também bloqueia sessões JWT existentes enquanto a conta estiver inactiva. Gerentes regionais/filiais só conseguem alterar clientes cujas contas estejam inteiramente no seu âmbito; se o cliente tiver contas fora dele, a alteração deve ser feita pelo gerente global.
-
-## Guia rápido: Maputo → Lisboa e failover
-
-1. No PC, entrar como **operador Maputo** ou **gerente de filial Maputo** e depositar um montante fictício numa conta cliente de Maputo. O gerente África continua a supervisionar os serviços regionais.
-2. No telemóvel 1, entrar como cliente de Maputo; no telemóvel 2, entrar como cliente com conta na filial Lisboa.
-3. Copiar o identificador da conta de Lisboa. No cliente Maputo, consultar câmbio e enviar uma transferência. O valor debitado é em **MZN**; o recebido é em **EUR**.
-4. Gerente regional abre **Nós continentais** e solicita **Desligar nó principal** para África, escolhendo motivo. O agente Windows fará a alteração autorizada; o painel e clientes recebem o estado de falha, e a standby assume.
-5. Durante o intervalo de recuperação, novos pedidos afectados podem devolver `503` com indicação para aguardar. Confirmar o estado de qualquer operação iniciada antes de reenviar. Depois do failover, tentar nova transferência com nova chave **apenas se não existiu operação pendente anterior**.
-6. Gerente selecciona **Ligar nó principal**. O serviço só deve ser apresentado como operativo após health-check; operações no standby não devem ser interrompidas voluntariamente.
-
-Se o agente estiver desligado, o backend recusa comandos pela interface; para um teste manual seguro, utilizar `docker compose stop af-primary` e `docker compose up -d --no-build af-primary` num PowerShell do servidor.
-
-### Acesso por telemóvel na mesma rede (não usar IP WSL)
-
-1. Liga o PC e o telemóvel à **mesma rede local privada** (não usar rede convidada ou isolamento entre clientes).
-2. No PowerShell do PC, usa `Get-NetIPConfiguration | Where-Object IPv4DefaultGateway` e escolhe o IPv4 do adaptador físico com gateway (Ethernet/Wi-Fi). Nunca uses `172.26.*` de vEthernet WSL nem `192.168.56.1` de VirtualBox.
-3. Executa o iniciador `INICIAR_WINDOWS.bat` para actualizar `LAN_IP` e o certificado académico para esse IPv4. O ficheiro `.credentials` passa a mostrar o endereço correcto sem mudar as palavras-passe.
-4. Numa rede privada de confiança, abre o PowerShell como Administrador e executa `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\PERMITIR_ACESSO_TELEMOVEIS.ps1`. A regra abre TCP 8443 **apenas para a sub-rede local e perfil Privado**.
-5. No telemóvel, abre `https://IPv4_REAL_DO_PC:8443`. Se houver erro de certificado, importa a CA académica para o dispositivo autorizado, ou realiza os ensaios no PC. **Não desligar TLS** nem abrir a porta na Internet.
-
-## Testes
-
-**Sem Docker (sintaxe/estrutura):**
-
-```powershell
-python ferramentas/VALIDAR_NANDBANK.py
-```
-
-**Com Docker (transacções reais do protótipo e autorizações):**
-
-```powershell
-.\TESTAR_TUDO_WINDOWS.bat
-```
-
-Este script executa `app.smoke` (2PC, idempotência, ACID local, saldos e PDF) e `app.nandbank_smoke` (pedidos e aprovação de cartões, congelamento, **gestão lógica de clientes/expiração/reactivação**, autorização regional, acesso aos assets React e protecção de nós). Os testes geram apenas contas fictícias.
-
-**Failover automatizado original:**
-
-```powershell
-.\DEMO_FAILOVER_WINDOWS.bat
-```
-
-**Logs:**
-
-```powershell
-docker compose ps
-docker compose logs --tail=70 gateway router af-primary af-standby db-af
-```
-
-**Nota sobre verificação:** o projecto pode passar verificações estáticas sem ter sido executado end-to-end neste ambiente. A execução real dos contentores e o comportamento da Firewall, certificados, telemóveis e host-agent têm de ser validados no Windows. A publicação no GitHub não equivale a um teste real de failover, replicação de PostgreSQL ou NFS. Consultar `docs/RELATORIO_VALIDACAO.md`.
-
-## Publicar no GitHub + GitHub Pages
-
-1. Criar um **repositório público** para o NandBank.
-2. Abrir a pasta `NandBank` no VS Code e fazer `git init`, `git add .`, `git commit -m "feat: estrutura inicial NandBank"`.
-3. Associar o remoto do **teu próprio repositório** e fazer push para `main`.
-4. No GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-5. Abrir **Actions** e verificar os workflows `NandBank — Verificações do código` e `NandBank — Publicar GitHub Pages`.
-6. O GitHub apresentará o URL publicado do projecto. Nele funciona apenas `pages/`, um frontend ilustrativo. A ligação a dados do Docker não é pública.
-
-Workflow `pages.yml` publica só a pasta `pages/` usando acções oficiais do GitHub. O workflow `tests.yml` compila Java, verifica estrutura e JavaScript e valida o Compose com segredos fictícios de CI. Não guarda qualquer `.env` real.
-
-### Segurança ao publicar
-
-Não enviar `.env`, `.credentials`, chaves JWT, certificados privados, backups, ficheiros de dados, capturas com passwords, credenciais pessoais ou um export PostgreSQL. A pasta `pages/` não contém JWT nem endpoints reais. A configuração de CORS não foi alargada para aceitar pedidos de origens públicas, propositadamente.
-
-## Aspectos académicos a defender
-
-- Diferença entre fragmentação geográfica de dados e replicação de BD.
-- Transacções locais ACID e internacionais 2PC, bloqueios, commit durável, idempotência e recuperação.
-- Disponibilidade de aplicação com HAProxy e standby; limitações na falha física e da BD.
-- Interoperação de serviços (Python ↔ Java), TLS/mTLS, JWT, HMAC.
-- OMA/CORBA como comparação conceptual com REST/HTTP e serviços independentes.
-- Avaliação real no Docker versus demonstração visual no GitHub Pages.
-
-## Fotografia, marca e direitos
-
-A identidade foi inspirada nas referências de layout fornecidas para o projecto. A fotografia da landing page é carregada remotamente de uma imagem publicada sob a [licença Unsplash](https://unsplash.com/license): [fotografia utilizada](https://unsplash.com/photos/young-woman-smiling-while-holding-phone-and-credit-card-BKq_7oEvFN4). A imagem não significa que a pessoa retratada seja cliente ou endosse o banco. A marca de leão com coroa foi adaptada visualmente a partir da referência do projecto. **A equipa deve verificar direitos de utilização da marca antes de uso comercial**.
+</div>
 
 ---
 
-**NandBank · Projecto universitário · Moçambique, 2026.**
+> [!IMPORTANT]
+> O **NandBank é um protótipo académico**. Todas as contas, moedas, saldos, cartões e operações são fictícios. **Não movimenta dinheiro real**, não presta serviços financeiros e não deve ser utilizado como sistema bancário de produção.
+
+## 🌍 Visão geral
+
+O NandBank simula uma instituição financeira com presença em **seis continentes**. Cada região dispõe de uma instância principal (*primary*) e de uma instância de reserva (*standby*), encaminhadas pelo **HAProxy**. As operações bancárias são coordenadas por serviços **FastAPI**, com persistência em bases **PostgreSQL** regionais e global.
+
+O projecto foi desenvolvido para demonstrar, na prática, **distribuição geográfica de serviços, transacções 2PC, idempotência, autenticação, failover de aplicação, interoperabilidade e transferência de ficheiros**.
+
+### O que funciona em cada ambiente?
+
+| Ambiente | Endereço | Finalidade |
+|:--|:--|:--|
+| **Aplicação real do protótipo** | `https://localhost:8443` | Interface ligada ao Gateway, bases de dados e serviços Docker no Windows |
+| **Telemóveis na rede local** | `https://IP_DO_PC:8443` | Acesso à mesma aplicação, sujeito à rede e aos certificados de laboratório |
+| **GitHub Pages** | [Publicação estática](https://armando-liedson-dev.github.io/NandBank---System-/) | Demonstração visual independente; **não executa transacções reais do protótipo** |
+| **Código-fonte** | [GitHub — branch Parte2](https://github.com/armando-liedson-dev/NandBank---System-/tree/Parte2) | Código, configurações, testes e documentação |
+
+> [!NOTE]
+> A ligação acima do GitHub Pages corresponde ao endereço convencional do repositório; a sua disponibilidade depende da publicação ter sido activada no GitHub. O Pages disponibiliza apenas ficheiros estáticos. Para demonstrar PostgreSQL, 2PC, failover e SeaweedFS é necessário executar o sistema localmente.
+
+## ✨ Funcionalidades
+
+| Área | Implementação |
+|:--|:--|
+| 🌐 **Rede continental** | África, Europa, Ásia, América do Norte, América do Sul e Oceânia |
+| 🔀 **Disponibilidade** | 12 serviços regionais: 6 *primary* + 6 *standby*, com encaminhamento HAProxy |
+| 🗃️ **Persistência** | 7 bases PostgreSQL: 6 regionais e 1 global |
+| 💸 **Operações bancárias** | Depósitos, levantamentos, transferências locais e inter-regionais fictícias |
+| 🔐 **Transacções distribuídas** | Coordenação **Two-Phase Commit (2PC)** e idempotência |
+| 💱 **Câmbio** | Moedas e taxas académicas, com gestão autorizada |
+| 👥 **Controlo de acessos** | Autenticação JWT RS256 e perfis de cliente, balcão e gerência |
+| 💳 **Cartões digitais** | Pedido, aprovação, recusa e congelamento de cartões fictícios |
+| 🧾 **Comprovativos** | Exportação PDF de transferências confirmadas |
+| 🖥️ **Gestão de nós** | Desligar e ligar serviços principais pela interface, através do agente Windows autorizado |
+| 📂 **Sistema distribuído de ficheiros** | Armazenamento SeaweedFS e agentes regionais auxiliares |
+| 🔄 **Transferência de ficheiros** | Envio e leitura entre regiões com validação de integridade **SHA-256** |
+| 📋 **Auditoria** | Exportação de relatórios da base PostgreSQL global para o SeaweedFS |
+
+## 🧩 Arquitectura do sistema
+
+```mermaid
+flowchart TB
+    U[Clientes e gestores] --> F[Frontend React / TypeScript]
+    F -->|HTTPS| G[Gateway FastAPI]
+    G -->|Encaminhamento| H[HAProxy]
+    H --> AF[África: primary / standby]
+    H --> EU[Europa: primary / standby]
+    H --> AS[Ásia: primary / standby]
+    H --> NA[América do Norte: primary / standby]
+    H --> SA[América do Sul: primary / standby]
+    H --> OC[Oceânia: primary / standby]
+    G --> C[Coordenação transaccional / 2PC]
+    C --> DB0[(PostgreSQL global)]
+    AF & EU & AS & NA & SA & OC --> DBR[(6 PostgreSQL regionais)]
+    G -. integração .-> J[Serviço legado Java]
+    W[Agente Windows] -->|ordens autorizadas| H
+```
+
+**Armazenamento de ficheiros (Fases 4 e 5):**
+
+```mermaid
+flowchart LR
+    A[Agente AF] --> S[(SeaweedFS)]
+    E[Agente EU] --> S
+    X[Agente AS] --> S
+    N[Agente NA] --> S
+    M[Agente SA] --> S
+    O[Agente OC] --> S
+    P[(PostgreSQL global)] -->|leitura de auditoria| R[Exportador]
+    R --> S
+    S --> V[Leitura e verificação SHA-256]
+```
+
+> [!WARNING]
+> **Limites técnicos:** o *primary* e o *standby* de cada continente partilham a mesma base PostgreSQL; o failover é **de aplicação**, não de base de dados. A infraestrutura é executada num único computador. As transferências de ficheiros ocorrem entre **agentes auxiliares regionais**, não directamente entre os processos bancários. Ainda não foi demonstrada tolerância à perda de um servidor de armazenamento.
+
+### 🛠️ Tecnologias
+
+| Camada | Tecnologias |
+|:--|:--|
+| Interface real | React, TypeScript, Vite |
+| Serviços bancários | Python, FastAPI |
+| Persistência | PostgreSQL |
+| Transacções | ACID local, Two-Phase Commit, idempotência |
+| Encaminhamento | HAProxy |
+| Contentorização | Docker Desktop, Docker Compose |
+| DFS e transferência | SeaweedFS, agentes Python, SHA-256 |
+| Integração com legado | Java 21, HTTPS/mTLS, HMAC |
+| Segurança | TLS, JWT RS256, perfis e permissões |
+| Qualidade e automatização | Testes Python/Node.js, GitHub Actions |
+
+## 🗂️ Organização do projecto
+
+A estrutura mantém os caminhos consumidos pelo Docker Compose, scripts Windows e pipelines de CI:
+
+```text
+NandBank/
+├── .github/workflows/             # Testes automáticos e publicação Pages
+├── backend/                       # API, Gateway, regiões, 2PC e segurança
+├── docs/                          # Arquitectura, defesa e documentação técnica
+├── fases45/                       # Agentes regionais e exportação de auditoria
+├── ferramentas/                   # Validadores e utilitários existentes
+├── frontend/                      # Assets servidos pela aplicação Docker
+├── frontend-premium-source/       # Código-fonte React / TypeScript
+├── infra/                         # SQL, certificados, HAProxy e Java legado
+├── pages/                         # Site demonstrativo estático
+├── scripts/                       # Arranque, agente Windows e testes
+├── tests/                         # Testes e contratos
+├── .env.example                    # Referência de configuração (sem segredos)
+├── docker-compose.yml             # Serviços bancários principais
+├── docker-compose.fases45.yml     # Extensão SeaweedFS
+├── INSTALAR_E_TESTAR_FASES_4_E_5.ps1
+├── INICIAR_WINDOWS.bat            # Inicialização no Windows
+├── INICIAR_NANDBANK.bat           # Inicialização com reconstrução
+├── TESTAR_TUDO_WINDOWS.bat        # Validação integrada
+└── README.md
+```
+
+Os directórios de correções antigas, backups e versões visuais históricas **não são necessários para executar o sistema** e não precisam de aparecer na raiz pública do repositório.
+
+## 🚀 Executar localmente
+
+### Pré-requisitos
+
+**Windows 10/11**, **Docker Desktop** com motor Linux/WSL2, **Git** e recursos suficientes para executar os contentores. O primeiro arranque requer Internet para obter as imagens. A execução de todos os serviços exige memória considerável; recomenda-se um computador com pelo menos **12–16 GB de RAM** disponíveis no sistema.
+
+### 1. Obter a branch Parte2
+
+```powershell
+git clone --branch Parte2 https://github.com/armando-liedson-dev/NandBank---System-.git
+cd NandBank---System-
+```
+
+### 2. Iniciar a aplicação bancária
+
+Abre o **Docker Desktop** e confirma que o motor está activo. Depois, na pasta do projecto:
+
+```powershell
+.\INICIAR_WINDOWS.bat
+```
+
+O instalador inicial prepara o ambiente local, gera credenciais de laboratório e inicia os serviços. Depois de concluído, abre:
+
+**https://localhost:8443**
+
+> [!CAUTION]
+> As palavras-passe geradas localmente são guardadas em `.credentials` e as configurações sensíveis em `.env`. **Não publiques, fotografes nem envies esses ficheiros para o GitHub.** Para consultar as credenciais na tua própria máquina, usa `Get-Content .credentials`.
+
+### 3. Iniciar / verificar as Fases 4 e 5
+
+O instalador adicional deve permanecer na **raiz** porque utiliza caminhos relativos ao Docker Compose e à pasta `fases45/`.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\INSTALAR_E_TESTAR_FASES_4_E_5.ps1 -Modo Estado
+```
+
+Se for uma instalação nova em que a extensão ainda não foi activada:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\INSTALAR_E_TESTAR_FASES_4_E_5.ps1 -Modo InstalarETestar
+```
+
+Para repetir os ensaios de integridade:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\INSTALAR_E_TESTAR_FASES_4_E_5.ps1 -Modo Testar
+```
+
+### 4. Utilização no telemóvel
+
+Os dispositivos devem estar na **mesma rede local privada**. Usa `https://IP_REAL_DO_PC:8443`. Certificados auto-assinados de laboratório precisam de ser reconhecidos nos dispositivos de teste autorizados; não se deve desactivar TLS nem abrir a aplicação directamente à Internet.
+
+### 5. Gestão de falhas pela interface
+
+Acede ao painel de **Nós continentais** com um perfil autorizado. Solicita o desligamento do nó principal de uma região e acompanha a activação do *standby*. Quando terminares o ensaio, solicita a reposição do principal **pela própria interface**.
+
+Durante a transição pode existir indisponibilidade temporária (aproximadamente um minuto nos testes anteriores). Antes de repetir uma transferência, confirma se houve uma operação pendente, evitando duplicações.
+
+## 🧪 Testes e evidências
+
+| Verificação | Evidência disponível |
+|:--|:--|
+| Contratos e validação estrutural | Testes e ferramentas do repositório |
+| Transferências bancárias fictícias | Testes de integração e demonstração Windows |
+| Failover da aplicação | Ensaio pelo painel de nós com agente Windows |
+| Transferência de ficheiros | **6 de 6** percursos regionais aprovados no ensaio registado |
+| Integridade | SHA-256 confirmado nos seis percursos |
+| Auditoria | Relatório da base global exportado para SeaweedFS |
+
+**Percursos de ficheiros validados:** `AF → EU → AS → NA → SA → OC → AF`.
+
+**Testes gerais:**
+
+```powershell
+python .\ferramentas\VALIDAR_NANDBANK.py
+.\TESTAR_TUDO_WINDOWS.bat
+```
+
+**Estado dos serviços:**
+
+```powershell
+docker compose ps
+docker compose -f docker-compose.yml -f docker-compose.fases45.yml ps
+```
+
+> [!TIP]
+> Os ensaios das Fases 4 e 5 gravam evidências na pasta local `.private-backups/`, excluída do Git. O estado verde do CI não substitui testes reais de Docker, rede ou failover.
+
+## 🔐 Segurança e consistência
+
+Adoptámos autenticação JWT, controlo de permissões, TLS/mTLS, comandos administrativos autorizados e chaves de idempotência. As transacções inter-regionais utilizam coordenação 2PC, permitindo decisões duráveis, embora possam existir estados temporariamente pendentes perante falhas.
+
+A infraestrutura de demonstração tem limitações próprias de um laboratório académico: não disponibiliza redundância física entre máquinas, não valida uma replicação autónoma de PostgreSQL e não possui certificação bancária. O acesso administrativo e o controlo de nós devem permanecer restritos ao ambiente autorizado.
+
+**Para preservar os dados:** nunca executes `docker compose down -v` ou `docker volume rm` durante a preparação ou a defesa. Não elimines `.env`, `.credentials` nem os volumes PostgreSQL.
+
+## 📚 Documentação
+
+| Documento | Conteúdo |
+|:--|:--|
+| [Arquitectura](docs/ARQUITETURA.md) | Organização e comunicação entre componentes |
+| [DFS](docs/DFS.md) | Abordagem de armazenamento distribuído e limitações |
+| [Parte 2 — Integração](docs/PARTE2_INTEGRACAO.md) | Integração das partes do projecto |
+| [Guia de defesa](docs/GUIA_DEFESA_NANDBANK.md) | Percurso de apresentação ao docente |
+| [Testes e defesa](docs/TESTES_E_DEFESA.md) | Validação e demonstração |
+| [Relatório de validação](docs/RELATORIO_VALIDACAO.md) | Estado das verificações documentadas |
+| [Relatório de correcções](docs/RELATORIO_CORRECOES_2026-11-23.md) | Alterações introduzidas |
+| [Organização do repositório](docs/ORGANIZACAO_REPOSITORIO.md) | Regras de estrutura, manutenção e versionamento |
+
+## 🎓 Contexto académico
+
+O **NandBank** foi desenvolvido no âmbito da unidade curricular de **Sistemas Distribuídos e Paralelos (SDP)** do **Instituto Superior de Transportes e Comunicações (ISUTC)**, em Moçambique, no ano de 2026.
+
+O projecto reúne conceitos de comunicação entre serviços, distribuição geográfica, disponibilidade, consistência transaccional, interoperabilidade, segurança e armazenamento de ficheiros.
+
+**Branch de entrega:** [`Parte2`](https://github.com/armando-liedson-dev/NandBank---System-/tree/Parte2). A branch `main` não é alterada por este procedimento de organização.
+
+### Créditos e utilização
+
+A interface e os recursos visuais pertencem ao contexto académico do projecto. A fotografia utilizada na landing page é atribuída à sua [fonte original no Unsplash](https://unsplash.com/photos/young-woman-smiling-while-holding-phone-and-credit-card-BKq_7oEvFN4) e está sujeita à [licença Unsplash](https://unsplash.com/license). A identidade gráfica deve ter os seus direitos verificados antes de qualquer exploração comercial.
+
+---
+
+<div align="center">
+
+### NandBank
+
+**Seis continentes. Uma rede. Transacções distribuídas.**
+
+*Projecto académico · ISUTC · Moçambique · 2026*
+
+</div>

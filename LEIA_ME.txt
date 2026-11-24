@@ -1,8 +1,0 @@
-1. Copie os dois ficheiros .ps1 para a pasta principal do NandBank, ao lado de docker-compose.yml.
-2. Com Docker Desktop ligado, execute no PowerShell nessa pasta:
-   powershell -NoProfile -ExecutionPolicy Bypass -File .\INSTALAR_AGENTE_AUTOMATICO_NANDBANK.ps1
-3. Execute a verificacao:
-   powershell -NoProfile -ExecutionPolicy Bypass -File .\VERIFICAR_FASES_NANDBANK.ps1
-4. Entre como gerente no URL https://localhost:8443/gerente/infraestrutura
-5. Ligue/desligue apenas um principal por vez. Aguarde failover, execute operacao bancaria ficticia, volte a iniciar principal e confira saldos e historico.
-Nao sao incluidos segredos, .env nem .credentials neste pacote.
